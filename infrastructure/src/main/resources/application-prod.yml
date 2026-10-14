@@ -1,0 +1,15 @@
+# =====================================================================
+# Perfil de PRODUCCIÓN
+# DB_URL es obligatoria (sin valor por defecto): si falta, la app no arranca.
+# =====================================================================
+spring:
+  datasource:
+    url: ${DB_URL}
+
+  jpa:
+    show-sql: false
+
+logging:
+  level:
+    root: INFO
+    com.rentaherramientas: INFO
