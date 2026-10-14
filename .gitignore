@@ -1,0 +1,27 @@
+# Compilación
+target/
+*.class
+*.jar
+!**/src/main/**/*.jar
+
+# Secretos y configuración local
+.env
+*.env.local
+
+# Archivos subidos en ejecución
+uploads/
+
+# IDEs
+.vscode/
+.idea/
+*.iml
+.settings/
+.classpath
+.project
+.factorypath
+
+# Logs y sistema
+*.log
+logs/
+.DS_Store
+Thumbs.db
