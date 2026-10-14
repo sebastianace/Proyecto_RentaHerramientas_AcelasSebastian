@@ -1,0 +1,64 @@
+# =====================================================================
+# Configuración común a todos los perfiles
+# Los valores sensibles NUNCA van aquí: llegan por variables de entorno
+# o por el archivo .env local (que no se sube a GitHub).
+# =====================================================================
+spring:
+  application:
+    name: renta-herramientas
+
+  config:
+    # Carga el .env si existe. Se buscan dos rutas porque al ejecutar con
+    # "mvn -pl infrastructure spring-boot:run" el directorio de trabajo es el módulo.
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  datasource:
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    # Evita consultas a la BD desde la vista/controlador; las transacciones terminan en el caso de uso
+    open-in-view: false
+    hibernate:
+      # Flyway crea y modifica el esquema; Hibernate solo verifica que las entidades coincidan
+      ddl-auto: validate
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: America/Bogota
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
+    # Si alguien modifica una migración ya aplicada, la app no arranca (protege la integridad del esquema)
+    validate-on-migrate: true
+
+  servlet:
+    multipart:
+      # Límite para la carga de imágenes de herramientas
+      max-file-size: 5MB
+      max-request-size: 10MB
+
+# Servidor Apache Tomcat embebido
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-stacktrace: never
+  tomcat:
+    connection-timeout: 20s
+    threads:
+      max: 200
+      min-spare: 10
+
+# Almacenamiento local de imágenes de herramientas
+media:
+  storage:
+    base-path: ${MEDIA_BASE_PATH:./uploads}
