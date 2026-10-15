@@ -1,15 +1,23 @@
 package com.rentaherramientas.infrastructure.config;
 
 import com.rentaherramientas.application.ports.in.AutenticacionUseCase;
+import com.rentaherramientas.application.ports.in.GestionCategoriasUseCase;
 import com.rentaherramientas.application.ports.in.GestionClientesUseCase;
+import com.rentaherramientas.application.ports.in.GestionHerramientasUseCase;
 import com.rentaherramientas.application.ports.in.GestionProveedoresUseCase;
+import com.rentaherramientas.application.ports.out.AlmacenamientoArchivosPort;
 import com.rentaherramientas.application.ports.out.AutenticadorPort;
+import com.rentaherramientas.application.ports.out.ConsultaHerramientasPort;
 import com.rentaherramientas.application.ports.out.PasswordEncoderPort;
 import com.rentaherramientas.application.ports.out.TokenProviderPort;
 import com.rentaherramientas.application.usecases.AutenticacionService;
+import com.rentaherramientas.application.usecases.GestionCategoriasService;
 import com.rentaherramientas.application.usecases.GestionClientesService;
+import com.rentaherramientas.application.usecases.GestionHerramientasService;
 import com.rentaherramientas.application.usecases.GestionProveedoresService;
+import com.rentaherramientas.domain.repositories.CategoriaRepository;
 import com.rentaherramientas.domain.repositories.ClienteRepository;
+import com.rentaherramientas.domain.repositories.HerramientaRepository;
 import com.rentaherramientas.domain.repositories.ProveedorRepository;
 import com.rentaherramientas.domain.repositories.UsuarioRepository;
 import org.springframework.aop.framework.ProxyFactory;
@@ -73,6 +81,21 @@ public class UseCaseConfig {
                                                      GestionClientesUseCase gestionClientes) {
         return transaccional(new AutenticacionService(autenticador, tokenProvider, usuarioRepository,
                 clienteRepository, proveedorRepository, gestionClientes), AutenticacionUseCase.class);
+    }
+
+    @Bean
+    public GestionCategoriasUseCase gestionCategoriasUseCase(CategoriaRepository categoriaRepository) {
+        return transaccional(new GestionCategoriasService(categoriaRepository), GestionCategoriasUseCase.class);
+    }
+
+    @Bean
+    public GestionHerramientasUseCase gestionHerramientasUseCase(HerramientaRepository herramientaRepository,
+                                                                 CategoriaRepository categoriaRepository,
+                                                                 ProveedorRepository proveedorRepository,
+                                                                 ConsultaHerramientasPort consultaHerramientas,
+                                                                 AlmacenamientoArchivosPort almacenamiento) {
+        return transaccional(new GestionHerramientasService(herramientaRepository, categoriaRepository,
+                proveedorRepository, consultaHerramientas, almacenamiento), GestionHerramientasUseCase.class);
     }
 
     /** Envuelve el caso de uso en un proxy que abre y cierra la transacción en cada llamada. */
