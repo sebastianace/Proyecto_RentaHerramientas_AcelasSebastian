@@ -29,7 +29,7 @@ import java.util.List;
  * <ul>
  *   <li><b>Stateless:</b> no hay sesión en el servidor; cada petición trae su JWT.</li>
  *   <li><b>CSRF deshabilitado:</b> CSRF ataca cookies de sesión; como usamos tokens en el header, no aplica.</li>
- *   <li><b>Reglas por URL:</b> login, registro y Swagger son públicos; el resto exige token.</li>
+ *   <li><b>Reglas por URL:</b> login, registro, Swagger y la consulta del catálogo son públicos; el resto exige token.</li>
  *   <li><b>Reglas por rol:</b> con @PreAuthorize en cada endpoint (@EnableMethodSecurity).</li>
  * </ul>
  */
@@ -40,6 +40,10 @@ import java.util.List;
 public class SecurityConfig {
 
     private static final String[] RUTAS_SWAGGER = {"/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**"};
+    private static final String[] RUTAS_CATALOGO_PUBLICO = {
+            "/api/v1/herramientas", "/api/v1/herramientas/**",
+            "/api/v1/categorias", "/api/v1/categorias/**",
+            "/media/**"};
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtTokenProvider tokenProvider,
@@ -57,6 +61,10 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/registro").permitAll()
+                        // El orden importa: la primera regla que coincide gana. El inventario va ANTES
+                        // que la regla pública de herramientas porque "/inventario" también calza con "/**"
+                        .requestMatchers(HttpMethod.GET, "/api/v1/herramientas/inventario").authenticated()
+                        .requestMatchers(HttpMethod.GET, RUTAS_CATALOGO_PUBLICO).permitAll()
                         .requestMatchers(RUTAS_SWAGGER).permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
