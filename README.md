@@ -15,8 +15,9 @@ API REST construida con **Spring Boot** para que proveedores publiquen su invent
 4. [Requisitos previos](#-requisitos-previos)
 5. [Instalación y ejecución](#-instalación-y-ejecución)
 6. [Configuración (`application.yml`)](#-configuración)
-7. [Flujo de trabajo con Git Flow](#-flujo-de-trabajo-con-git-flow)
-8. [Estado del proyecto](#-estado-del-proyecto)
+7. [Base de datos](#-base-de-datos)
+8. [Flujo de trabajo con Git Flow](#-flujo-de-trabajo-con-git-flow)
+9. [Estado del proyecto](#-estado-del-proyecto)
 
 ---
 
@@ -68,7 +69,8 @@ El enunciado pide separación en Controllers, Services, Repositories, DTOs y Ent
 ```
 Proyecto_RentaHerramientas_AcelasSebastian
 ├── pom.xml                         # Proyecto padre (packaging pom)
-├── database/                       # Scripts SQL de apoyo
+├── database/                       # Script de creación de BD y usuario
+├── docs/                           # Diagrama relacional
 ├── domain/                         # Núcleo del negocio (Java puro)
 │   └── src/main/java/com/rentaherramientas/domain
 │       ├── model
@@ -165,7 +167,7 @@ La configuración está en `infrastructure/src/main/resources` y se divide por p
 | Archivo | Uso |
 |---|---|
 | `application.yml` | Configuración común: datasource, JPA, Flyway, Tomcat, carga de archivos |
-| `application-dev.yml` | Desarrollo: SQL visible en consola, logs en DEBUG |
+| `application-dev.yml` | Desarrollo: SQL visible en consola, logs en DEBUG, carga datos de prueba |
 | `application-prod.yml` | Producción: sin SQL en consola, `DB_URL` obligatoria |
 
 Ejemplo (fragmento de `application.yml`):
@@ -192,6 +194,73 @@ spring:
 | `DB_USERNAME` | Usuario de la BD | `renta_app` |
 | `DB_PASSWORD` | Clave de la BD | — |
 | `MEDIA_BASE_PATH` | Carpeta para imágenes | `./uploads` |
+
+---
+
+## 🗄️ Base de datos
+
+### Diagrama relacional
+
+![Diagrama relacional](docs/diagrama-relacional.png)
+
+El modelo tiene **15 tablas** organizadas por contexto de negocio:
+
+| Contexto | Tablas |
+|---|---|
+| Identidad | `roles`, `usuarios`, `usuario_roles`, `proveedores`, `clientes` |
+| Catálogo | `categorias`, `herramientas`, `herramienta_imagenes` |
+| Alquileres | `reservas`, `reserva_detalles`, `entregas`, `devoluciones`, `reportes_danos` |
+| Facturación | `pagos`, `facturas` |
+
+**Reglas de diseño principales**
+
+- Una reserva pertenece a **un solo proveedor**, que es quien la aprueba o rechaza.
+- El precio por día se **congela** en `reserva_detalles` al reservar; los cambios de precio posteriores no afectan reservas ni facturas existentes.
+- **Disponibilidad** de una herramienta en un rango de fechas = `stock_total` − `unidades_fuera_servicio` − unidades en reservas `APROBADA`, `PAGADA` o `ENTREGADA` que se cruzan con ese rango.
+- Días cobrados = `fecha_fin − fecha_inicio + 1` (ambos días incluidos). IVA del 19 %.
+- Los montos usan `DECIMAL(12,2)`; los estados son `VARCHAR` con restricción `CHECK`.
+- Usuarios y herramientas con historial no se eliminan físicamente: se desactivan (borrado lógico).
+
+**Ciclo de vida de una reserva**
+
+```
+PENDIENTE ──► APROBADA ──► PAGADA ──► ENTREGADA ──► DEVUELTA
+    │             │
+    ├► RECHAZADA  ├► VENCIDA (no se pagó antes de fecha_limite_pago)
+    └► CANCELADA  └► CANCELADA
+```
+
+### Scripts SQL
+
+El esquema y los datos se crean con **Flyway** al arrancar la aplicación. Los scripts están en `infrastructure/src/main/resources/db/`:
+
+| Script | Contenido |
+|---|---|
+| `migration/V1__create_identity_tables.sql` | Usuarios, roles, proveedores y clientes |
+| `migration/V2__create_catalog_tables.sql` | Categorías, herramientas e imágenes |
+| `migration/V3__create_rental_tables.sql` | Reservas, detalles, entregas, devoluciones y daños |
+| `migration/V4__create_billing_tables.sql` | Pagos y facturas |
+| `migration/V5__add_query_indexes.sql` | Índices para búsquedas y reportes |
+| `seed/V6__seed_identity.sql` | 42 usuarios (2 admin, 20 proveedores, 20 clientes) |
+| `seed/V7__seed_catalog.sql` | 20 categorías, 40 herramientas y sus imágenes |
+| `seed/V8__seed_rentals.sql` | 35 reservas en todos los estados, entregas, devoluciones y daños |
+| `seed/V9__seed_billing.sql` | 30 pagos (aprobados y rechazados) y 27 facturas |
+
+Los datos de prueba (`db/seed`) **solo se cargan en el perfil `dev`**. En `prod` Flyway aplica únicamente `db/migration`.
+
+Para crear la base sin la aplicación, ejecuta los scripts en orden (V1 → V9) sobre la base `renta_herramientas`.
+
+> La tabla `roles` es un catálogo fijo de 3 registros (ADMIN, PROVEEDOR, CLIENTE). Todas las demás tablas tienen al menos 20 registros.
+
+### Usuarios de prueba
+
+Todos usan la clave **`Renta2026*`** (almacenada como hash BCrypt).
+
+| Rol | Email |
+|---|---|
+| ADMIN | `admin@rentaherramientas.com` |
+| PROVEEDOR | `carlos.rueda@herroriente.com` |
+| CLIENTE | `juanpablo.ardila@gmail.com` |
 
 ---
 
@@ -228,7 +297,7 @@ Ejemplo: `feat(reservas): validar disponibilidad antes de aprobar una reserva`
 ## 📌 Estado del proyecto
 
 - [x] Fase 0 — Estructura multimódulo, perfiles y configuración base
-- [ ] Fase 1 — Modelo relacional, migraciones Flyway y datos de prueba
+- [x] Fase 1 — Modelo relacional, migraciones Flyway y datos de prueba
 - [ ] Fase 2 — Usuarios, roles, Spring Security y JWT
 - [ ] Fase 3 — Catálogo de herramientas e imágenes
 - [ ] Fase 4 — Reservas y control de disponibilidad
