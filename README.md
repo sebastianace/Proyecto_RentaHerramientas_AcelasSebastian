@@ -100,10 +100,11 @@ Proyecto_RentaHerramientas_AcelasSebastian
             │   ├── exceptionhandler
             │   └── dtos
             └── outbound
-                └── persistence
-                    ├── entities
-                    ├── mappers
-                    └── repositories
+                ├── persistence
+                │   ├── entities
+                │   ├── mappers
+                │   └── repositories
+                └── storage         # Almacenamiento de imágenes
 ```
 
 ---
@@ -401,6 +402,66 @@ POST /api/v1/auth/login
 | DELETE | `/api/v1/proveedores/{id}` | ADMIN | Desactivar (borrado lógico) |
 | PATCH | `/api/v1/proveedores/{id}/activar` | ADMIN | Reactivar |
 
+
+### Categorías
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| GET | `/api/v1/categorias` | Público | Listar categorías activas (`?incluirInactivas=true` solo ADMIN) |
+| GET | `/api/v1/categorias/{id}` | Público | Obtener una categoría |
+| POST | `/api/v1/categorias` | ADMIN | Crear |
+| PUT | `/api/v1/categorias/{id}` | ADMIN | Actualizar |
+| DELETE | `/api/v1/categorias/{id}` | ADMIN | Desactivar |
+| PATCH | `/api/v1/categorias/{id}/activar` | ADMIN | Reactivar |
+
+### Herramientas
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| GET | `/api/v1/herramientas` | Público | Catálogo: herramientas activas, con filtros opcionales `categoriaId`, `texto`, `ciudad`, `precioMaximo` |
+| GET | `/api/v1/herramientas/{id}` | Público | Detalle con imágenes |
+| GET | `/api/v1/herramientas/inventario` | PROVEEDOR, ADMIN | Inventario en cualquier estado (`?estado=`, ADMIN también `?proveedorId=`) |
+| POST | `/api/v1/herramientas` | PROVEEDOR, ADMIN | Agregar herramienta |
+| PUT | `/api/v1/herramientas/{id}` | Dueño, ADMIN | Actualizar precio, stock y unidades fuera de servicio |
+| PATCH | `/api/v1/herramientas/{id}/estado` | Dueño, ADMIN | `ACTIVA`, `EN_MANTENIMIENTO` o `INACTIVA` |
+| DELETE | `/api/v1/herramientas/{id}` | Dueño, ADMIN | Retirar (borrado lógico) |
+| POST | `/api/v1/herramientas/{id}/imagenes` | Dueño, ADMIN | Subir imagen (`multipart/form-data`, campo `archivo`) |
+| PATCH | `/api/v1/herramientas/{id}/imagenes/{imagenId}/principal` | Dueño, ADMIN | Marcar imagen principal |
+| DELETE | `/api/v1/herramientas/{id}/imagenes/{imagenId}` | Dueño, ADMIN | Eliminar imagen |
+
+Ejemplo de búsqueda en el catálogo:
+
+```
+GET /api/v1/herramientas?categoriaId=1&ciudad=Bucaramanga&precioMaximo=50000&pagina=0&tamanio=12
+```
+
+```json
+{
+  "contenido": [
+    {
+      "id": 1,
+      "nombre": "Rotomartillo SDS Plus 800W",
+      "marca": "Bosch",
+      "precioPorDia": 35000.00,
+      "stockTotal": 6,
+      "unidadesFueraServicio": 0,
+      "unidadesOperativas": 6,
+      "estado": "ACTIVA",
+      "categoria": { "id": 1, "nombre": "Taladros y Rotomartillos" },
+      "proveedor": { "id": 1, "razonSocial": "Herramientas del Oriente S.A.S.", "ciudad": "Bucaramanga" },
+      "imagenPrincipal": "https://placehold.co/600x400?text=Rotomartillo",
+      "imagenes": [ { "id": 1, "url": "https://placehold.co/600x400?text=Rotomartillo", "principal": true, "orden": 0 } ]
+    }
+  ],
+  "pagina": 0,
+  "tamanio": 12,
+  "totalElementos": 1,
+  "totalPaginas": 1
+}
+```
+
+Las imágenes subidas se guardan en `MEDIA_BASE_PATH` y se sirven públicamente en `/media/...`. Solo se aceptan JPG, PNG y WEBP de máximo 5 MB; el nombre del archivo lo genera el servidor.
+
 ---
 
 ## 🌿 Flujo de trabajo con Git Flow
@@ -438,7 +499,7 @@ Ejemplo: `feat(reservas): validar disponibilidad antes de aprobar una reserva`
 - [x] Fase 0 — Estructura multimódulo, perfiles y configuración base
 - [x] Fase 1 — Modelo relacional, migraciones Flyway y datos de prueba
 - [x] Fase 2 — Usuarios, roles, Spring Security y JWT
-- [ ] Fase 3 — Catálogo de herramientas e imágenes
+- [x] Fase 3 — Catálogo de herramientas e imágenes
 - [ ] Fase 4 — Reservas y control de disponibilidad
 - [ ] Fase 5 — Pagos y facturación
 - [ ] Fase 6 — Entregas, devoluciones y reportes de daños
