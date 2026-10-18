@@ -613,6 +613,42 @@ POST /api/v1/reservas/36/devolucion
   bloquea (`SELECT ... FOR UPDATE`) para no chocar con una aprobación simultánea.
 - La devolución la confirma el proveedor y la **valida** el ADMIN (dos responsables distintos), una sola vez.
 
+### Reportes y estadísticas
+
+Solo **ADMIN** (toda la plataforma, puede filtrar con `proveedorId`) y **PROVEEDOR** (siempre solo su inventario,
+aunque envíe otro `proveedorId`). Fechas opcionales `desde` / `hasta` (inclusivas); por defecto, del 1 de enero hasta hoy.
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/api/v1/reportes/panel` | Todo el panel en una petición: resumen + ingresos por mes + top 5 herramientas + top 5 clientes |
+| GET | `/api/v1/reportes/resumen` | KPIs: ingresos brutos/netos, IVA, pagos, tasa de aprobación, ticket promedio, facturación, reservas por estado, inventario, incidencias |
+| GET | `/api/v1/reportes/ingresos` | Ingresos por mes |
+| GET | `/api/v1/reportes/ingresos/proveedores` | Ranking de ingresos por proveedor (**solo ADMIN**) |
+| GET | `/api/v1/reportes/herramientas-mas-alquiladas?limite=10` | Ranking por número de alquileres, unidades-día e ingresos |
+| GET | `/api/v1/reportes/clientes-frecuentes?limite=10` | Ranking por alquileres y monto gastado |
+| GET | `/api/v1/reportes/rentabilidad` | Por herramienta: ingresos − costo de daños = utilidad, margen % y ocupación % |
+| GET | `/api/v1/reportes/inventario` | Disponibilidad y estado HOY de cada herramienta, con alertas |
+
+**Criterios:**
+- **Ingresos** = pagos `APROBADOS`, por fecha de pago. *Brutos* incluyen IVA; *netos* no (el IVA no es ingreso del negocio).
+- **Alquileres** = reservas `PAGADA`, `ENTREGADA` o `DEVUELTA`, por fecha de inicio.
+- **Ocupación** = unidades-día alquiladas ÷ (stock × días del periodo).
+- Las agregaciones se hacen en MySQL con SQL nativo (`ConsultaReportesAdapter`); los indicadores derivados (margen,
+  ocupación, ticket promedio, alertas) se calculan en `ReportesService`.
+
+```json
+GET /api/v1/reportes/resumen
+{
+  "periodo": { "desde": "2026-01-01", "hasta": "2026-10-18" },
+  "ingresosBrutos": 38650010.00, "ingresosNetos": 32479000.00, "ivaRecaudado": 6171010.00,
+  "pagosAprobados": 31, "pagosRechazados": 6, "tasaAprobacionPagos": 83.78, "ticketPromedio": 1246774.52,
+  "facturasEmitidas": 31, "montoFacturado": 38650010.00,
+  "reservasPorEstado": { "DEVUELTA": 22, "PAGADA": 5, "ENTREGADA": 4, "PENDIENTE": 3, "VENCIDA": 3 },
+  "clientesActivos": 20, "herramientas": 40, "unidadesTotales": 187, "unidadesFueraServicio": 2,
+  "incidenciasAbiertas": 8, "devolucionesPorValidar": 3
+}
+```
+
 ---
 
 ## 🧪 Pruebas de punta a punta
@@ -667,6 +703,6 @@ Ejemplo: `feat(reservas): validar disponibilidad antes de aprobar una reserva`
 - [x] Fase 4 — Reservas y control de disponibilidad
 - [x] Fase 5 — Pagos y facturación
 - [x] Fase 6 — Entregas, devoluciones y reportes de daños
-- [ ] Fase 7 — Reportes y estadísticas
+- [x] Fase 7 — Reportes y estadísticas
 - [ ] Fase 8 — Swagger, colección de Postman y pruebas
 - [ ] Fase 9 — Frontend

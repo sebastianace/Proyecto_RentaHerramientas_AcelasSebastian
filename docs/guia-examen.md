@@ -173,3 +173,33 @@ un byte, y el decodificador los descarta: la firma decodificada es **idéntica**
 cambiar el **contenido**: si se altera cualquier carácter real de la firma, o el payload (por ejemplo `"roles":["ADMIN"]`),
 la firma HMAC calculada con `JWT_SECRET` ya no coincide y la respuesta es 401. El script de pruebas hace justo ese
 ataque (cambia el rol a ADMIN) y verifica el 401.
+
+---
+
+## Fase 7 — Reportes y estadísticas
+
+**1. ¿Por qué los reportes usan SQL nativo con `NamedParameterJdbcTemplate` y no repositorios JPA?**
+Los reportes son **agregaciones** (`SUM`, `COUNT`, `GROUP BY`) que no corresponden a ninguna entidad. Con SQL la base de
+datos hace el cálculo y solo viajan los totales; con JPA habría que cargar cientos de entidades a memoria para sumarlas
+en Java. Es el lado de **lectura** del CQRS ligero: no pasa por los agregados porque no modifica nada. Y como es un
+adaptador detrás de `ConsultaReportesPort`, el caso de uso no sabe ni le importa que sea SQL.
+
+**2. Un PROVEEDOR llama `GET /reportes/resumen?proveedorId=5`. ¿Qué datos recibe y dónde se decide?**
+Recibe **solo los suyos**. `ReportesService.alcance()` ignora el `proveedorId` que manda un proveedor y usa el de su
+propio perfil (lo busca con el `usuarioId` del token). Solo el ADMIN puede elegir proveedor. Si fuera un CLIENTE,
+`@PreAuthorize("hasAnyRole('ADMIN','PROVEEDOR')")` responde 403 antes de llegar al caso de uso (y el caso de uso
+también lo rechaza: defensa en profundidad).
+
+**3. ¿Qué diferencia hay entre ingresos brutos y netos, y por qué se reportan por fecha de pago?**
+*Brutos* = lo que pagó el cliente (incluye IVA del 19 %). *Netos* = subtotal sin IVA. El IVA se recauda para la DIAN,
+no es ingreso del negocio, así que la rentabilidad se mide con el neto. Se usa la fecha del pago aprobado (criterio de
+**caja**): el dinero entra cuando se paga, no cuando se crea la reserva.
+
+**4. ¿Dónde se calcula la ocupación de una herramienta y por qué ahí y no en el SQL?**
+En `ReportesService.consultarRentabilidad()`: `unidades-día alquiladas / (stock × días del periodo) × 100`. El SQL
+entrega cifras crudas (unidades-día, stock) y la regla de negocio (cómo se define "ocupación", el redondeo, el orden por
+utilidad) queda en la capa de aplicación, donde se puede probar con Mockito sin base de datos.
+
+**Trampa que apareció:** los *text blocks* de Java (`"""`) eliminan los espacios al final de cada línea. Por eso
+`"WHERE """ + condicion` producía `WHEREr.estado` y MySQL respondía error de sintaxis. Se resolvió poniendo los
+espacios dentro de las constantes que se concatenan.
