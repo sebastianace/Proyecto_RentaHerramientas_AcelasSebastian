@@ -72,4 +72,5 @@ public class PagoEntity {
     public LocalDateTime getFechaPago() { return fechaPago; }
     public void setFechaPago(LocalDateTime fechaPago) { this.fechaPago = fechaPago; }
     public FacturaEntity getFactura() { return factura; }
+    public void setFactura(FacturaEntity factura) { this.factura = factura; }
 }

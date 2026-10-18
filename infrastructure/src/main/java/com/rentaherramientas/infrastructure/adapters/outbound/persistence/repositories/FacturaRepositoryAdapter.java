@@ -5,6 +5,7 @@ import com.rentaherramientas.domain.model.aggregates.Factura;
 import com.rentaherramientas.domain.model.valueobject.Dinero;
 import com.rentaherramientas.domain.repositories.FacturaRepository;
 import com.rentaherramientas.infrastructure.adapters.outbound.persistence.entities.FacturaEntity;
+import com.rentaherramientas.infrastructure.adapters.outbound.persistence.entities.PagoEntity;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -27,7 +28,11 @@ public class FacturaRepositoryAdapter implements FacturaRepository {
                 : jpa.findById(factura.getId())
                      .orElseThrow(() -> new RecursoNoEncontradoException("Factura", factura.getId()));
         entidad.setNumero(factura.getNumero());
-        entidad.setPago(pagoJpa.getReferenceById(factura.getPagoId()));
+        PagoEntity pago = pagoJpa.getReferenceById(factura.getPagoId());
+        entidad.setPago(pago);
+        // Se sincroniza el lado inverso: el pago ya está en memoria en esta transacción y, sin esto,
+        // la consulta posterior lo devolvería con factura = null aunque la factura sí exista.
+        pago.setFactura(entidad);
         entidad.setFechaEmision(factura.getFechaEmision());
         entidad.setSubtotal(factura.getSubtotal().monto());
         entidad.setIva(factura.getIva().monto());
