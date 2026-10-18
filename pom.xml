@@ -29,6 +29,7 @@
         <spring.boot.version>4.1.1</spring.boot.version>
         <springdoc.version>3.1.0</springdoc.version>
         <jjwt.version>0.13.0</jjwt.version>
+        <openpdf.version>2.0.3</openpdf.version>
 
         <maven.compiler.plugin.version>3.13.0</maven.compiler.plugin.version>
         <maven.surefire.plugin.version>3.5.2</maven.surefire.plugin.version>
@@ -62,6 +63,13 @@
                 <groupId>org.springdoc</groupId>
                 <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
                 <version>${springdoc.version}</version>
+            </dependency>
+
+            <!-- Generación de PDF (facturas). Fork libre de iText 4, licencia LGPL/MPL -->
+            <dependency>
+                <groupId>com.github.librepdf</groupId>
+                <artifactId>openpdf</artifactId>
+                <version>${openpdf.version}</version>
             </dependency>
 
             <!-- JWT -->
