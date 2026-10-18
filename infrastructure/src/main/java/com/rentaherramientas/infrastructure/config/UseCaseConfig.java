@@ -9,6 +9,9 @@ import com.rentaherramientas.application.ports.in.GestionHerramientasUseCase;
 import com.rentaherramientas.application.ports.in.GestionPagosUseCase;
 import com.rentaherramientas.application.ports.in.GestionProveedoresUseCase;
 import com.rentaherramientas.application.ports.in.GestionReservasUseCase;
+import com.rentaherramientas.application.ports.in.ReportesUseCase;
+import com.rentaherramientas.application.ports.out.ConsultaReportesPort;
+import com.rentaherramientas.application.usecases.ReportesService;
 import com.rentaherramientas.application.ports.out.AlmacenamientoArchivosPort;
 import com.rentaherramientas.application.ports.out.AutenticadorPort;
 import com.rentaherramientas.application.ports.out.ConsultaDevolucionesPort;
@@ -161,6 +164,12 @@ public class UseCaseConfig {
         return transaccional(new GestionDevolucionesService(reservaRepository, entregaRepository, devolucionRepository,
                 reporteDanoRepository, herramientaRepository, clienteRepository, proveedorRepository, consulta, reloj),
                 GestionDevolucionesUseCase.class);
+    }
+
+    @Bean
+    public ReportesUseCase reportesUseCase(ConsultaReportesPort consultaReportes,
+                                           ProveedorRepository proveedorRepository, Clock reloj) {
+        return transaccional(new ReportesService(consultaReportes, proveedorRepository, reloj), ReportesUseCase.class);
     }
 
     /** Envuelve el caso de uso en un proxy que abre y cierra la transacción en cada llamada. */
