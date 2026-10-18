@@ -4,12 +4,14 @@ import com.rentaherramientas.application.config.PoliticaReservas;
 import com.rentaherramientas.application.ports.in.AutenticacionUseCase;
 import com.rentaherramientas.application.ports.in.GestionCategoriasUseCase;
 import com.rentaherramientas.application.ports.in.GestionClientesUseCase;
+import com.rentaherramientas.application.ports.in.GestionDevolucionesUseCase;
 import com.rentaherramientas.application.ports.in.GestionHerramientasUseCase;
 import com.rentaherramientas.application.ports.in.GestionPagosUseCase;
 import com.rentaherramientas.application.ports.in.GestionProveedoresUseCase;
 import com.rentaherramientas.application.ports.in.GestionReservasUseCase;
 import com.rentaherramientas.application.ports.out.AlmacenamientoArchivosPort;
 import com.rentaherramientas.application.ports.out.AutenticadorPort;
+import com.rentaherramientas.application.ports.out.ConsultaDevolucionesPort;
 import com.rentaherramientas.application.ports.out.ConsultaFacturasPort;
 import com.rentaherramientas.application.ports.out.ConsultaHerramientasPort;
 import com.rentaherramientas.application.ports.out.ConsultaPagosPort;
@@ -21,12 +23,16 @@ import com.rentaherramientas.application.ports.out.TokenProviderPort;
 import com.rentaherramientas.application.usecases.AutenticacionService;
 import com.rentaherramientas.application.usecases.GestionCategoriasService;
 import com.rentaherramientas.application.usecases.GestionClientesService;
+import com.rentaherramientas.application.usecases.GestionDevolucionesService;
 import com.rentaherramientas.application.usecases.GestionHerramientasService;
 import com.rentaherramientas.application.usecases.GestionPagosService;
 import com.rentaherramientas.application.usecases.GestionProveedoresService;
 import com.rentaherramientas.application.usecases.GestionReservasService;
 import com.rentaherramientas.domain.repositories.CategoriaRepository;
 import com.rentaherramientas.domain.repositories.ClienteRepository;
+import com.rentaherramientas.domain.repositories.DevolucionRepository;
+import com.rentaherramientas.domain.repositories.EntregaRepository;
+import com.rentaherramientas.domain.repositories.ReporteDanoRepository;
 import com.rentaherramientas.domain.repositories.FacturaRepository;
 import com.rentaherramientas.domain.repositories.PagoRepository;
 import com.rentaherramientas.domain.repositories.HerramientaRepository;
@@ -141,6 +147,20 @@ public class UseCaseConfig {
         return transaccional(new GestionPagosService(reservaRepository, pagoRepository, facturaRepository,
                 clienteRepository, proveedorRepository, pasarela, consultaPagos, consultaFacturas, generadorPdf,
                 reloj), GestionPagosUseCase.class);
+    }
+
+    @Bean
+    public GestionDevolucionesUseCase gestionDevolucionesUseCase(ReservaRepository reservaRepository,
+                                                                 EntregaRepository entregaRepository,
+                                                                 DevolucionRepository devolucionRepository,
+                                                                 ReporteDanoRepository reporteDanoRepository,
+                                                                 HerramientaRepository herramientaRepository,
+                                                                 ClienteRepository clienteRepository,
+                                                                 ProveedorRepository proveedorRepository,
+                                                                 ConsultaDevolucionesPort consulta, Clock reloj) {
+        return transaccional(new GestionDevolucionesService(reservaRepository, entregaRepository, devolucionRepository,
+                reporteDanoRepository, herramientaRepository, clienteRepository, proveedorRepository, consulta, reloj),
+                GestionDevolucionesUseCase.class);
     }
 
     /** Envuelve el caso de uso en un proxy que abre y cierra la transacción en cada llamada. */
