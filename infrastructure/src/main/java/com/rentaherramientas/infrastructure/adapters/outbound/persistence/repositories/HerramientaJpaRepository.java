@@ -5,11 +5,15 @@ import com.rentaherramientas.infrastructure.adapters.outbound.persistence.entiti
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 public interface HerramientaJpaRepository extends JpaRepository<HerramientaEntity, Long> {
@@ -71,4 +75,12 @@ public interface HerramientaJpaRepository extends JpaRepository<HerramientaEntit
     Page<HerramientaEntity> buscarInventario(@Param("proveedorId") Long proveedorId,
                                              @Param("estado") EstadoHerramienta estado,
                                              Pageable pageable);
+
+    /**
+     * SELECT ... FOR UPDATE: bloquea las filas hasta el final de la transacción.
+     * Se ordenan por id para que dos transacciones siempre bloqueen en el mismo orden y no haya deadlocks.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select h from HerramientaEntity h where h.id in :ids order by h.id")
+    List<HerramientaEntity> bloquearPorIds(@Param("ids") Collection<Long> ids);
 }
