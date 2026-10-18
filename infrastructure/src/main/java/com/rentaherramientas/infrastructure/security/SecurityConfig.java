@@ -61,6 +61,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/registro").permitAll()
+                        // Cotizar es público, como en cualquier tienda: solo calcula con precios públicos, no guarda nada
+                        .requestMatchers(HttpMethod.POST, "/api/v1/reservas/cotizacion").permitAll()
                         // El orden importa: la primera regla que coincide gana. El inventario va ANTES
                         // que la regla pública de herramientas porque "/inventario" también calza con "/**"
                         .requestMatchers(HttpMethod.GET, "/api/v1/herramientas/inventario").authenticated()
