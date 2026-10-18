@@ -7,6 +7,8 @@ import com.rentaherramientas.infrastructure.adapters.outbound.persistence.entiti
 import com.rentaherramientas.infrastructure.adapters.outbound.persistence.mappers.CatalogoEntityMapper;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -44,5 +46,15 @@ public class HerramientaRepositoryAdapter implements HerramientaRepository {
     @Override
     public Optional<Herramienta> buscarPorId(Long id) {
         return jpa.findById(id).map(CatalogoEntityMapper::aDominio);
+    }
+
+    @Override
+    public List<Herramienta> buscarPorIds(Collection<Long> ids) {
+        return jpa.findAllById(ids).stream().map(CatalogoEntityMapper::aDominio).toList();
+    }
+
+    @Override
+    public List<Herramienta> bloquearParaReserva(Collection<Long> ids) {
+        return jpa.bloquearPorIds(ids).stream().map(CatalogoEntityMapper::aDominio).toList();
     }
 }
