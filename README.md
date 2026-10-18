@@ -98,7 +98,8 @@ Proyecto_RentaHerramientas_AcelasSebastian
             ├── inbound
             │   ├── controller
             │   ├── exceptionhandler
-            │   └── dtos
+            │   ├── dtos
+            │   └── scheduler       # Tareas programadas (vencimiento de reservas)
             └── outbound
                 ├── persistence
                 │   ├── entities
@@ -462,6 +463,59 @@ GET /api/v1/herramientas?categoriaId=1&ciudad=Bucaramanga&precioMaximo=50000&pag
 
 Las imágenes subidas se guardan en `MEDIA_BASE_PATH` y se sirven públicamente en `/media/...`. Solo se aceptan JPG, PNG y WEBP de máximo 5 MB; el nombre del archivo lo genera el servidor.
 
+### Reservas y disponibilidad
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| GET | `/api/v1/herramientas/{id}/disponibilidad?fechaInicio=&fechaFin=` | Público | Unidades libres en un rango de fechas |
+| POST | `/api/v1/reservas/cotizacion` | Autenticado | Calcula días, subtotal, IVA y total sin guardar |
+| POST | `/api/v1/reservas` | CLIENTE | Solicitar reserva (queda `PENDIENTE`) |
+| GET | `/api/v1/reservas?estado=` | Autenticado | Historial: el cliente ve las suyas, el proveedor las de su inventario, el ADMIN todas |
+| GET | `/api/v1/reservas/{id}` | Dueño, ADMIN | Detalle |
+| PATCH | `/api/v1/reservas/{id}/aprobar` | PROVEEDOR dueño, ADMIN | Aprobar: aparta unidades y fija la fecha límite de pago |
+| PATCH | `/api/v1/reservas/{id}/rechazar` | PROVEEDOR dueño, ADMIN | Rechazar con motivo |
+| PATCH | `/api/v1/reservas/{id}/cancelar` | CLIENTE dueño, ADMIN | Cancelar antes de pagar |
+
+Ejemplo de solicitud:
+
+```json
+POST /api/v1/reservas
+{
+  "fechaInicio": "2026-10-20",
+  "fechaFin": "2026-10-22",
+  "herramientas": [
+    { "herramientaId": 1, "cantidad": 2 },
+    { "herramientaId": 2, "cantidad": 1 }
+  ],
+  "notas": "Entregar en la portería de la obra"
+}
+```
+
+```json
+201 Created
+{
+  "id": 36,
+  "codigo": "RES-2026-0036",
+  "estado": "PENDIENTE",
+  "fechaInicio": "2026-10-20",
+  "fechaFin": "2026-10-22",
+  "dias": 3,
+  "subtotal": 276000.00,
+  "iva": 52440.00,
+  "total": 328440.00,
+  "detalles": [
+    { "herramientaId": 1, "herramienta": "Rotomartillo SDS Plus 800W", "cantidad": 2, "precioPorDia": 35000.00, "dias": 3, "subtotal": 210000.00 },
+    { "herramientaId": 2, "herramienta": "Pulidora angular 4 1/2\"", "cantidad": 1, "precioPorDia": 22000.00, "dias": 3, "subtotal": 66000.00 }
+  ]
+}
+```
+
+**Cómo se controla la disponibilidad**
+
+1. **Al solicitar**, se verifica que haya unidades libres (aviso temprano al cliente). La reserva queda `PENDIENTE` y todavía no aparta unidades.
+2. **Al aprobar**, se bloquean las filas de las herramientas con `SELECT ... FOR UPDATE` y se vuelve a verificar. Si dos proveedores (o dos pestañas) aprueban al mismo tiempo reservas que compiten por la última unidad, la segunda espera a que termine la primera y recibe `409 Conflict`.
+3. Una reserva `APROBADA` tiene **24 horas** para pagarse (`RESERVAS_PLAZO_PAGO`). Una tarea programada revisa cada 5 minutos y pasa a `VENCIDA` las que no se pagaron, liberando las unidades.
+
 ---
 
 ## 🌿 Flujo de trabajo con Git Flow
@@ -500,7 +554,7 @@ Ejemplo: `feat(reservas): validar disponibilidad antes de aprobar una reserva`
 - [x] Fase 1 — Modelo relacional, migraciones Flyway y datos de prueba
 - [x] Fase 2 — Usuarios, roles, Spring Security y JWT
 - [x] Fase 3 — Catálogo de herramientas e imágenes
-- [ ] Fase 4 — Reservas y control de disponibilidad
+- [x] Fase 4 — Reservas y control de disponibilidad
 - [ ] Fase 5 — Pagos y facturación
 - [ ] Fase 6 — Entregas, devoluciones y reportes de daños
 - [ ] Fase 7 — Reportes y estadísticas
