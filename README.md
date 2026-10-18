@@ -577,6 +577,55 @@ POST /api/v1/reservas/36/pagos
 }
 ```
 
+### Entregas, devoluciones y daños
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| POST | `/api/v1/reservas/{id}/entrega` | PROVEEDOR dueño, ADMIN | Registrar la entrega: `PAGADA → ENTREGADA` |
+| GET | `/api/v1/reservas/{id}/entrega` | Dueños, ADMIN | Ver la entrega |
+| POST | `/api/v1/reservas/{id}/devolucion` | PROVEEDOR dueño, ADMIN | Confirmar la devolución (y reportar daños): `ENTREGADA → DEVUELTA` |
+| GET | `/api/v1/reservas/{id}/devolucion` | Dueños, ADMIN | Ver la devolución de una reserva |
+| GET | `/api/v1/devoluciones?validada=` | Autenticado | Listado según el rol (ADMIN supervisa todas) |
+| GET | `/api/v1/devoluciones/{id}` | Dueños, ADMIN | Detalle con sus daños |
+| PATCH | `/api/v1/devoluciones/{id}/validar` | ADMIN | Validar la devolución |
+| POST | `/api/v1/devoluciones/{id}/danos` | PROVEEDOR dueño, ADMIN | Reportar un daño |
+| GET | `/api/v1/danos?estado=&severidad=` | Autenticado | Incidencias según el rol |
+| PATCH | `/api/v1/danos/{id}/estado` | ADMIN | `ABIERTO → EN_REVISION → RESUELTO` |
+
+Ejemplo de devolución con un daño:
+
+```json
+POST /api/v1/reservas/36/devolucion
+{
+  "estadoEquipo": "CON_DANOS",
+  "observaciones": "Devuelto en la sede",
+  "danos": [
+    { "herramientaId": 1, "descripcion": "Carcasa partida por caída", "severidad": "GRAVE", "costoEstimado": 180000 }
+  ]
+}
+```
+
+**Reglas:**
+- Una entrega a `DOMICILIO` exige dirección; en `RECOGIDA_EN_SEDE` la dirección se descarta.
+- No se pueden reportar daños si el equipo se devolvió `BUENO`, ni de herramientas que no estaban en la reserva.
+- Un daño **GRAVE** saca de servicio una unidad (`unidades_fuera_servicio + 1`), así que deja de contar para la
+  disponibilidad. Al **resolver** la incidencia, la unidad reparada vuelve a servicio. La fila de la herramienta se
+  bloquea (`SELECT ... FOR UPDATE`) para no chocar con una aprobación simultánea.
+- La devolución la confirma el proveedor y la **valida** el ADMIN (dos responsables distintos), una sola vez.
+
+---
+
+## 🧪 Pruebas de punta a punta
+
+El script [`docs/pruebas/flujo-completo.ps1`](docs/pruebas/flujo-completo.ps1) recorre todo el ciclo contra la API
+en ejecución (login de los 3 roles, reserva, aprobación, pago rechazado y aprobado, factura en PDF, entrega,
+devolución con daño GRAVE, validación del ADMIN, incidencias y reportes) y verifica también los casos que **deben
+fallar** (401, 403, 409, 422), incluido un token con el rol cambiado a ADMIN.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File docs\pruebas\flujo-completo.ps1
+```
+
 ---
 
 ## 🌿 Flujo de trabajo con Git Flow
@@ -617,7 +666,7 @@ Ejemplo: `feat(reservas): validar disponibilidad antes de aprobar una reserva`
 - [x] Fase 3 — Catálogo de herramientas e imágenes
 - [x] Fase 4 — Reservas y control de disponibilidad
 - [x] Fase 5 — Pagos y facturación
-- [ ] Fase 6 — Entregas, devoluciones y reportes de daños
+- [x] Fase 6 — Entregas, devoluciones y reportes de daños
 - [ ] Fase 7 — Reportes y estadísticas
 - [ ] Fase 8 — Swagger, colección de Postman y pruebas
 - [ ] Fase 9 — Frontend

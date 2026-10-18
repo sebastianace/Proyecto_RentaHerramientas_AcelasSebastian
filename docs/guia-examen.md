@@ -1,0 +1,175 @@
+# Guía de estudio para el examen — Renta de Herramientas
+
+El 39.5 % de la nota es **"Dominio y conocimiento del código"**. Esta guía junta las preguntas de cada fase con una
+respuesta modelo. Primero respóndelas con tus palabras y luego compara.
+
+> Al cerrar cada fase nueva, agrega aquí sus 4 preguntas con su respuesta modelo.
+
+---
+
+## Fase 0 — Estructura y configuración
+
+**1. ¿Por qué el pom padre tiene `packaging pom` y por qué la clase `main` está en `infrastructure`?**
+El pom padre no genera código: agrupa los módulos y centraliza las versiones. El `main` va en `infrastructure`
+porque usa `@SpringBootApplication` (Spring) y es el único módulo que puede conocer el framework; depende de
+`application` y `domain`, así que puede ensamblar todo. El dominio no puede depender de Spring.
+
+**2. ¿Qué hace `ddl-auto: validate` y por qué no `update` si hay Flyway?**
+Al arrancar compara las entidades JPA contra las tablas reales (columnas y tipos) y, si no coinciden, la app no
+arranca; nunca modifica nada. Con `update`, Hibernate y Flyway serían dos dueños del esquema y chocarían; además
+`update` no borra columnas, no deja historial y no se reproduce en otra máquina. Flyway versiona cada cambio.
+
+**3. ¿Por qué `prod` no tiene valor por defecto para `DB_URL` y `dev` sí?**
+Principio *fail-fast*: en producción es mejor que la app **no arranque** a que arranque conectada a la base
+equivocada. Sin valor por defecto, si falta la variable falla de inmediato y el error es evidente. En `dev`
+`localhost` es una comodidad segura.
+
+**4. Si cambian MySQL por PostgreSQL, ¿qué módulos tocas?**
+Solo `infrastructure`: driver y `flyway-database-postgresql` en el pom, URL en los `.yml`/`.env`, migraciones SQL con
+sintaxis propia de MySQL y el script de creación de BD. **`domain` y `application` no cambian**: hablan con interfaces
+(puertos), no con MySQL. Ese es el beneficio de hexagonal.
+
+---
+
+## Fase 1 — Modelo de datos
+
+**1. `reserva_detalles` guarda `precio_por_dia`, que ya está en `herramientas`. ¿Es redundancia mala?**
+No: es una **foto histórica**. `herramientas.precio_por_dia` es el precio actual; el de `reserva_detalles` es el
+pactado el día de la reserva. Si el proveedor sube el precio, las reservas y facturas viejas no deben cambiar.
+
+**2. ¿Por qué los datos de prueba están en `db/seed` y no en `db/migration`?**
+Flyway carga carpetas distintas según el perfil. En `prod` nunca llegan los usuarios de prueba, que tienen una clave
+conocida por todos (`Renta2026*`): sería un hueco de seguridad.
+
+**3. ¿Qué acelera `idx_reservas_estado_fechas` y por qué esas tres columnas?**
+La consulta de disponibilidad: `WHERE estado IN (...) AND fecha_inicio <= :fin AND fecha_fin >= :inicio`. `estado` va
+primero porque se compara por igualdad y las fechas después porque son rangos; MySQL usa el índice de izquierda a derecha.
+
+**4. Ya aplicaste V3 y falta una columna en `reservas`. ¿Modificas V3?**
+Nunca. Flyway guardó el checksum de V3 y `validate-on-migrate` detendría la app. Se crea una migración nueva
+(`V10__agregar_columna_x.sql`) con un `ALTER TABLE`.
+
+---
+
+## Fase 2 — Seguridad con JWT
+
+**1. ¿Por qué se deshabilita CSRF y por qué no es un riesgo?**
+CSRF funciona porque el navegador envía las cookies **automáticamente**. El header `Authorization: Bearer` el navegador
+nunca lo envía solo; lo pone nuestro código, así que una página maliciosa no puede falsificarlo. La API es stateless
+(sin cookies de sesión).
+
+**2. Alguien cambia `"roles":["CLIENTE"]` por `["ADMIN"]` en su token. ¿Qué pasa?**
+**No tiene acceso: 401.** El payload solo está codificado en Base64 (se puede *leer*, no es secreto), pero la firma
+HMAC se calcula con header + payload + `JWT_SECRET`. Si se altera el payload, la firma deja de coincidir y
+`JwtTokenProvider.validar()` rechaza el token. Sin la clave secreta no se puede generar una firma válida. Por eso no se
+guardan datos sensibles en el payload.
+
+**3. ¿Diferencia entre 401 y 403?**
+401 = "no sé quién eres" (sin token, token vencido, clave incorrecta). 403 = "sé quién eres, pero no puedes" (un CLIENTE
+pide `GET /clientes`; pide el perfil de otro cliente; usuario inactivo).
+
+**4. Los casos de uso no tienen `@Transactional`. ¿Cómo corren en una transacción?**
+`UseCaseConfig` crea el caso de uso con `new` y lo envuelve en un **proxy** (`ProxyFactory` + `TransactionInterceptor`).
+El controlador llama al proxy: abre la transacción, llama al método real y hace commit o rollback si hay excepción. Es el
+mismo mecanismo de `@Transactional` (un proxy AOP) pero configurado desde infraestructura para que `application` siga
+sin depender de Spring. Los métodos `obtener*`/`listar*` usan solo lectura.
+
+---
+
+## Fase 3 — Catálogo e imágenes
+
+**1. ¿Por qué la regla de `/herramientas/inventario` va antes que la pública `/herramientas/**`?**
+Spring Security evalúa los `requestMatchers` **en orden y gana el primero que coincide**. `/inventario` también calza con
+`/herramientas/**`. Si se invierten, el inventario quedaría público: cualquiera sin token entraría al controlador, que
+espera un usuario autenticado, y fallaría (o expondría datos).
+
+**2. ¿Por qué la extensión sale del `contentType` y no del nombre del archivo? ¿Qué es *path traversal*?**
+El nombre lo controla el usuario: podría mandar `../../x.jsp` o `virus.exe`. *Path traversal* es usar `../` en un nombre
+para escapar de la carpeta permitida y escribir en otro lugar del disco. Se evita generando el nombre con **UUID** y
+verificando con `normalize()` + `startsWith(raíz)` que la ruta final quede dentro de la carpeta base. *Matiz honesto:*
+el `contentType` también lo declara el cliente; una validación más fuerte revisa los "magic bytes" del archivo.
+
+**3. ¿Por qué un `ConsultaHerramientasPort` aparte del `HerramientaRepository`?**
+CQRS ligero. La **escritura** pasa por el agregado, que protege los invariantes. La **lectura** del catálogo necesita
+datos de varias tablas (categoría, proveedor, imágenes) en una sola consulta optimizada, devuelta directo como DTO, sin
+construir agregados completos.
+
+**4. ¿Qué hace `orphanRemoval = true` en la lista de imágenes?**
+Si una imagen sale de la lista de la entidad padre, Hibernate la elimina de la tabla (`DELETE`) automáticamente. Sin
+eso quedarían filas huérfanas.
+
+---
+
+## Fase 4 — Reservas y disponibilidad
+
+**1. ¿Por qué una reserva `PENDIENTE` no aparta unidades y una `APROBADA` sí?**
+Porque en `PENDIENTE` el proveedor todavía no se comprometió: si apartara, un cliente podría bloquear el inventario sin
+compromiso (y se bloquearía con solicitudes falsas). En `APROBADA` hay compromiso del proveedor y un plazo para pagar;
+si no se paga, vence y libera las unidades.
+
+**2. ¿Qué evita `SELECT ... FOR UPDATE` al aprobar? ¿Por qué se bloquea ordenado por id?**
+Una **condición de carrera**: dos aprobaciones leen "queda 1 unidad" al mismo tiempo y ambas aprueban → sobreventa.
+Con el bloqueo, la segunda espera, vuelve a verificar y ve 0. Se ordena por id para evitar **deadlocks**: si una
+transacción bloquea A y luego B y otra bloquea B y luego A, se quedan esperándose; con el mismo orden siempre, no.
+
+**3. ¿Por qué el caso de uso recibe un `Clock`?**
+Para poder **fijar "hoy"** en las pruebas (`Clock.fixed`) y probar vencimientos y validaciones de fechas sin depender del
+reloj real; además centraliza la zona horaria (`America/Bogota`).
+
+**4. Explica `fechaInicio <= finPedido AND fechaFin >= inicioPedido`.**
+Dos rangos se cruzan si cada uno empieza antes de que termine el otro. *Se cruzan:* A = 20–22 y B = 22–25 (comparten el
+22): `20 <= 25` y `22 >= 22`. *No se cruzan:* A = 20–22 y B = 23–25: `22 >= 23` es falso.
+
+---
+
+## Fase 5 — Pagos y facturación
+
+**1. ¿Por qué `verificarQueSePuedePagar()` va **antes** de cobrar si `confirmarPago()` ya valida lo mismo?**
+Porque `confirmarPago()` se ejecuta **después** del cobro. Si solo validáramos ahí, ya le habríamos cobrado dinero real a
+una reserva vencida o ya pagada y habría que reembolsar. Validar antes evita cobrar algo que no se puede confirmar. La
+segunda validación queda como defensa del dominio: el invariante siempre está protegido.
+
+**2. ¿Por qué se guardan también los pagos rechazados?**
+Auditoría y soporte (qué pasó con el intento del cliente), detección de fraude (muchos rechazos seguidos) y trazabilidad
+completa del historial. El cliente puede reintentar y todos los intentos quedan registrados.
+
+**3. ¿Por qué no se guarda el número de tarjeta? Si usan Wompi, ¿qué cambia?**
+Guardar datos de tarjeta exige cumplir **PCI DSS** y, si la BD se filtra, el daño es enorme. Solo se guarda la
+**referencia de la transacción**. Con Wompi se crea un nuevo adaptador (`WompiPasarelaAdapter`) que implemente
+`PasarelaPagoPort` en `infrastructure/adapters/outbound/pagos`, con sus claves en variables de entorno, y se desactiva el
+simulado (por ejemplo con `@Profile`). `domain` y `application` **no cambian**.
+
+**4. ¿Qué pasaría sin el bloqueo de la reserva si el cliente hace doble clic en "Pagar"?**
+Dos peticiones simultáneas leerían la reserva como `APROBADA`, ambas pasarían la validación y ambas cobrarían: **doble
+cobro** y dos facturas. Con el bloqueo, la segunda espera, entra cuando la reserva ya es `PAGADA` y recibe un 422.
+
+---
+
+## Fase 6 — Entregas, devoluciones y daños
+
+**1. ¿Por qué `Entrega`, `Devolucion` y `ReporteDano` son agregados distintos y no listas dentro de `Reserva`?**
+Porque tienen su propio ciclo de vida y sus propios responsables: la devolución la confirma el proveedor y la valida
+el ADMIN; el daño pasa por `ABIERTO → EN_REVISION → RESUELTO` mucho después de cerrada la reserva. Si fueran parte de
+`Reserva`, cada cambio de una incidencia obligaría a cargar y guardar toda la reserva. La `Reserva` solo controla su
+estado (`PAGADA → ENTREGADA → DEVUELTA`) con `registrarEntrega()` y `registrarDevolucion()`.
+
+**2. ¿Qué pasa en el sistema cuando el proveedor reporta un daño GRAVE? Recorre las capas.**
+`DevolucionController` recibe la petición → `GestionDevolucionesService.registrarDano()` crea el reporte con
+`ReporteDano.reportar()` (el dominio valida que la herramienta estaba en la reserva y que el equipo no se devolvió
+`BUENO`) → como `SeveridadDano.GRAVE.sacaDeServicio()` es `true`, bloquea la fila de la herramienta con
+`SELECT ... FOR UPDATE` y llama `Herramienta.sacarDeServicio(1)` → `unidades_fuera_servicio` sube en 1 → la
+disponibilidad de esa herramienta baja, porque se calcula con `stock − fuera de servicio − comprometidas`.
+Al **resolver** la incidencia, `reintegrarAServicio(1)` devuelve la unidad reparada.
+
+**3. ¿Por qué `validarDevolucion` revisa `esAdmin()` en el caso de uso si el controlador ya tiene
+`@PreAuthorize("hasRole('ADMIN')")`?**
+Defensa en profundidad. `@PreAuthorize` es infraestructura (Spring): si mañana el caso de uso se llama desde otro
+adaptador (un job, un mensaje, una prueba) esa anotación no existe. La regla "solo el ADMIN valida" es del negocio, así
+que también vive en la capa de aplicación, que no depende de Spring.
+
+**4. En las pruebas, un token con una "x" pegada al final seguía funcionando. ¿Es una vulnerabilidad?**
+No. La firma HS384 son 48 bytes = 64 caracteres Base64 exactos. Un carácter más aporta solo 6 bits, que no completan
+un byte, y el decodificador los descarta: la firma decodificada es **idéntica**. Lo que importa es que no se puede
+cambiar el **contenido**: si se altera cualquier carácter real de la firma, o el payload (por ejemplo `"roles":["ADMIN"]`),
+la firma HMAC calculada con `JWT_SECRET` ya no coincide y la respuesta es 401. El script de pruebas hace justo ese
+ataque (cambia el rol a ADMIN) y verifica el 401.
