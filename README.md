@@ -35,6 +35,7 @@ API REST construida con **Spring Boot** para que proveedores publiquen su invent
 | Migraciones | Flyway | gestionado por Spring Boot |
 | Seguridad | Spring Security + JWT (jjwt) | 7.x / 0.13.0 |
 | Documentación API | springdoc-openapi (Swagger UI) | 3.1.0 |
+| Facturas PDF | OpenPDF | 2.0.3 |
 | Pruebas | JUnit 5, AssertJ, Mockito | gestionado por Spring Boot |
 | Build | Maven (multimódulo) | 3.9+ |
 
@@ -105,7 +106,9 @@ Proyecto_RentaHerramientas_AcelasSebastian
                 │   ├── entities
                 │   ├── mappers
                 │   └── repositories
-                └── storage         # Almacenamiento de imágenes
+                ├── storage         # Almacenamiento de imágenes
+                ├── pagos           # Pasarela de pagos (simulada)
+                └── pdf             # Generación de facturas en PDF
 ```
 
 ---
@@ -516,6 +519,64 @@ POST /api/v1/reservas
 2. **Al aprobar**, se bloquean las filas de las herramientas con `SELECT ... FOR UPDATE` y se vuelve a verificar. Si dos proveedores (o dos pestañas) aprueban al mismo tiempo reservas que compiten por la última unidad, la segunda espera a que termine la primera y recibe `409 Conflict`.
 3. Una reserva `APROBADA` tiene **24 horas** para pagarse (`RESERVAS_PLAZO_PAGO`). Una tarea programada revisa cada 5 minutos y pasa a `VENCIDA` las que no se pagaron, liberando las unidades.
 
+### Pagos y facturación
+
+| Método | Ruta | Acceso | Descripción |
+|---|---|---|---|
+| POST | `/api/v1/reservas/{id}/pagos` | CLIENTE dueño | Pagar una reserva `APROBADA` |
+| GET | `/api/v1/pagos?estado=&desde=&hasta=` | Autenticado | Historial: cliente (los suyos), proveedor (de sus reservas), ADMIN (todos) |
+| GET | `/api/v1/facturas` | Autenticado | Facturas según el rol |
+| GET | `/api/v1/facturas/{id}` | Dueño, ADMIN | Detalle de la factura |
+| GET | `/api/v1/facturas/{id}/pdf` | Dueño, ADMIN | Descargar factura en PDF (incluye comprobante de pago) |
+
+**Flujo de pago**
+
+```
+1. Se bloquea la reserva (SELECT ... FOR UPDATE) → un doble clic no cobra dos veces
+2. Se verifica que esté APROBADA y dentro del plazo → nunca se cobra una reserva que no se puede confirmar
+3. Se cobra en la pasarela
+4. Se registra el intento (APROBADO o RECHAZADO)
+5. Si se aprobó: la reserva pasa a PAGADA y se emite la factura (FAC-2026-000028...)
+```
+
+La pasarela es **simulada** (adaptador `PasarelaPagoSimuladaAdapter`). Tarjetas de prueba:
+
+| Tarjeta | Resultado |
+|---|---|
+| Terminada en `0000` | Rechazada: fondos insuficientes |
+| Terminada en `1111` | Rechazada por el banco emisor |
+| Cualquier otra (ej. `4242424242424242`), PSE o NEQUI | Aprobada |
+
+Los datos de la tarjeta **nunca se guardan** ni se escriben completos en los logs: solo se almacena la referencia de la transacción. Para cobrar con una pasarela real (Wompi, PayU, Mercado Pago) basta con escribir otro adaptador del puerto `PasarelaPagoPort`.
+
+Ejemplo:
+
+```json
+POST /api/v1/reservas/36/pagos
+{
+  "metodo": "TARJETA_CREDITO",
+  "numeroTarjeta": "4242424242424242",
+  "titular": "JUAN PABLO ARDILA"
+}
+```
+
+```json
+201 Created
+{
+  "aprobado": true,
+  "mensaje": "Pago aprobado",
+  "pago": {
+    "id": 31,
+    "monto": 328440.00,
+    "metodo": "TARJETA_CREDITO",
+    "estado": "APROBADO",
+    "referenciaTransaccion": "TX-9F3A1C02B7",
+    "reserva": { "id": 36, "codigo": "RES-2026-0036", "estado": "PAGADA" },
+    "factura": { "id": 28, "numero": "FAC-2026-000028" }
+  }
+}
+```
+
 ---
 
 ## 🌿 Flujo de trabajo con Git Flow
@@ -555,7 +616,7 @@ Ejemplo: `feat(reservas): validar disponibilidad antes de aprobar una reserva`
 - [x] Fase 2 — Usuarios, roles, Spring Security y JWT
 - [x] Fase 3 — Catálogo de herramientas e imágenes
 - [x] Fase 4 — Reservas y control de disponibilidad
-- [ ] Fase 5 — Pagos y facturación
+- [x] Fase 5 — Pagos y facturación
 - [ ] Fase 6 — Entregas, devoluciones y reportes de daños
 - [ ] Fase 7 — Reportes y estadísticas
 - [ ] Fase 8 — Swagger, colección de Postman y pruebas

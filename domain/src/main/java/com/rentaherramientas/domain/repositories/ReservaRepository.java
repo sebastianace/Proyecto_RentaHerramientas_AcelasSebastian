@@ -14,6 +14,12 @@ public interface ReservaRepository {
     Optional<Reserva> buscarPorId(Long id);
 
     /**
+     * Carga la reserva bloqueando su fila hasta el fin de la transacción (SELECT ... FOR UPDATE).
+     * Evita que un doble clic en "Pagar" cobre dos veces la misma reserva.
+     */
+    Optional<Reserva> bloquearPorId(Long id);
+
+    /**
      * Suma las unidades de una herramienta comprometidas en reservas que ocupan inventario
      * (APROBADA, PAGADA, ENTREGADA) y cuyas fechas se cruzan con el rango.
      *

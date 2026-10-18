@@ -129,12 +129,20 @@ public class Reserva {
         this.estado = EstadoReserva.CANCELADA;
     }
 
-    /** Pago aprobado: la reserva queda confirmada automáticamente. */
-    public void confirmarPago(LocalDateTime ahora) {
+    /**
+     * Verifica, SIN cambiar nada, que la reserva se pueda pagar: debe estar APROBADA y dentro del plazo.
+     * Se llama antes de cobrar, para no cobrarle al cliente una reserva que no se puede confirmar.
+     */
+    public void verificarQueSePuedePagar(LocalDateTime ahora) {
         exigirEstado("pagar", EstadoReserva.APROBADA);
         if (estaVencida(ahora)) {
-            throw new ReglaDeNegocioException("El plazo para pagar esta reserva venció el " + fechaLimitePago);
+            throw new ReglaDeNegocioException("El plazo para pagar la reserva " + codigo + " venció el " + fechaLimitePago);
         }
+    }
+
+    /** Pago aprobado: la reserva queda confirmada automáticamente. */
+    public void confirmarPago(LocalDateTime ahora) {
+        verificarQueSePuedePagar(ahora);
         this.estado = EstadoReserva.PAGADA;
     }
 

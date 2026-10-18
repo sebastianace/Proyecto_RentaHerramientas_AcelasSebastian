@@ -53,6 +53,11 @@ public class ReservaRepositoryAdapter implements ReservaRepository {
     }
 
     @Override
+    public Optional<Reserva> bloquearPorId(Long id) {
+        return jpa.bloquearPorId(id).map(ReservaEntityMapper::aDominio);
+    }
+
+    @Override
     public int unidadesComprometidas(Long herramientaId, RangoFechas rango, Long reservaExcluida) {
         Long suma = jpa.sumarUnidadesComprometidas(herramientaId, EstadoReserva.OCUPAN_INVENTARIO,
                 rango.inicio(), rango.fin(), reservaExcluida);
