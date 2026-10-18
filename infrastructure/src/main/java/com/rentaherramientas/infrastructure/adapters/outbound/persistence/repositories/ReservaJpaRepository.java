@@ -2,10 +2,12 @@ package com.rentaherramientas.infrastructure.adapters.outbound.persistence.repos
 
 import com.rentaherramientas.domain.model.valueobject.EstadoReserva;
 import com.rentaherramientas.infrastructure.adapters.outbound.persistence.entities.ReservaEntity;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -63,4 +65,9 @@ public interface ReservaJpaRepository extends JpaRepository<ReservaEntity, Long>
                                @Param("proveedorId") Long proveedorId,
                                @Param("estado") EstadoReserva estado,
                                Pageable pageable);
+
+    /** SELECT ... FOR UPDATE sobre la reserva: dos pagos simultáneos de la misma reserva se atienden en fila. */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select r from ReservaEntity r where r.id = :id")
+    Optional<ReservaEntity> bloquearPorId(@Param("id") Long id);
 }
