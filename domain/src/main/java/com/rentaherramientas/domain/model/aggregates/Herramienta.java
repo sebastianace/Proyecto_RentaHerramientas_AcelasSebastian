@@ -110,6 +110,30 @@ public class Herramienta {
         imagenes.forEach(imagen -> imagen.setPrincipal(imagen == elegida));
     }
 
+    /**
+     * Un daño GRAVE deja unidades inservibles: dejan de contar para la disponibilidad.
+     * Nunca puede haber más unidades fuera de servicio que el stock (también es un CHECK de la tabla).
+     */
+    public void sacarDeServicio(int unidades) {
+        if (unidades <= 0) {
+            throw new ReglaDeNegocioException("Las unidades a sacar de servicio deben ser mayores que cero");
+        }
+        if (unidadesFueraServicio + unidades > stockTotal) {
+            throw new ReglaDeNegocioException("La herramienta '" + nombre + "' solo tiene " + unidadesOperativas()
+                    + " unidad(es) operativa(s)");
+        }
+        this.unidadesFueraServicio += unidades;
+    }
+
+    /** La unidad reparada vuelve a estar disponible para alquilar (al resolver un daño GRAVE). */
+    public void reintegrarAServicio(int unidades) {
+        if (unidades <= 0 || unidades > unidadesFueraServicio) {
+            throw new ReglaDeNegocioException("La herramienta '" + nombre + "' tiene " + unidadesFueraServicio
+                    + " unidad(es) fuera de servicio");
+        }
+        this.unidadesFueraServicio -= unidades;
+    }
+
     // ---------- Consultas de negocio ----------
 
     /** Unidades que físicamente se pueden alquilar (sin contar las dañadas o en mantenimiento). */
