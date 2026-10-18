@@ -5,11 +5,16 @@ import com.rentaherramientas.application.ports.in.AutenticacionUseCase;
 import com.rentaherramientas.application.ports.in.GestionCategoriasUseCase;
 import com.rentaherramientas.application.ports.in.GestionClientesUseCase;
 import com.rentaherramientas.application.ports.in.GestionHerramientasUseCase;
+import com.rentaherramientas.application.ports.in.GestionPagosUseCase;
 import com.rentaherramientas.application.ports.in.GestionProveedoresUseCase;
 import com.rentaherramientas.application.ports.in.GestionReservasUseCase;
 import com.rentaherramientas.application.ports.out.AlmacenamientoArchivosPort;
 import com.rentaherramientas.application.ports.out.AutenticadorPort;
+import com.rentaherramientas.application.ports.out.ConsultaFacturasPort;
 import com.rentaherramientas.application.ports.out.ConsultaHerramientasPort;
+import com.rentaherramientas.application.ports.out.ConsultaPagosPort;
+import com.rentaherramientas.application.ports.out.GeneradorFacturaPdfPort;
+import com.rentaherramientas.application.ports.out.PasarelaPagoPort;
 import com.rentaherramientas.application.ports.out.ConsultaReservasPort;
 import com.rentaherramientas.application.ports.out.PasswordEncoderPort;
 import com.rentaherramientas.application.ports.out.TokenProviderPort;
@@ -17,10 +22,13 @@ import com.rentaherramientas.application.usecases.AutenticacionService;
 import com.rentaherramientas.application.usecases.GestionCategoriasService;
 import com.rentaherramientas.application.usecases.GestionClientesService;
 import com.rentaherramientas.application.usecases.GestionHerramientasService;
+import com.rentaherramientas.application.usecases.GestionPagosService;
 import com.rentaherramientas.application.usecases.GestionProveedoresService;
 import com.rentaherramientas.application.usecases.GestionReservasService;
 import com.rentaherramientas.domain.repositories.CategoriaRepository;
 import com.rentaherramientas.domain.repositories.ClienteRepository;
+import com.rentaherramientas.domain.repositories.FacturaRepository;
+import com.rentaherramientas.domain.repositories.PagoRepository;
 import com.rentaherramientas.domain.repositories.HerramientaRepository;
 import com.rentaherramientas.domain.repositories.ProveedorRepository;
 import com.rentaherramientas.domain.repositories.ReservaRepository;
@@ -44,7 +52,7 @@ import java.time.Clock;
  * método del caso de uso se ejecuta dentro de una transacción. Si algo falla a mitad de
  * camino (ej. se guarda el usuario pero falla el cliente) se hace rollback de todo.</p>
  *
- * <p>Métodos que empiezan por obtener*, listar*, consultar* o cotizar* usan transacciones de solo lectura;
+ * <p>Métodos que empiezan por obtener*, listar*, consultar*, cotizar* o descargar* usan transacciones de solo lectura;
  * el resto, transacciones de lectura y escritura.</p>
  */
 @Configuration
@@ -63,6 +71,7 @@ public class UseCaseConfig {
         reglas.addTransactionalMethod("listar*", lectura);
         reglas.addTransactionalMethod("consultar*", lectura);
         reglas.addTransactionalMethod("cotizar*", lectura);
+        reglas.addTransactionalMethod("descargar*", lectura);
         reglas.addTransactionalMethod("*", escritura);
 
         this.transacciones = new TransactionInterceptor(transactionManager, reglas);
@@ -119,6 +128,19 @@ public class UseCaseConfig {
         PoliticaReservas politica = new PoliticaReservas(propiedades.plazoPago(), propiedades.diasMaximosAlquiler());
         return transaccional(new GestionReservasService(reservaRepository, herramientaRepository, clienteRepository,
                 proveedorRepository, consultaReservas, politica, reloj), GestionReservasUseCase.class);
+    }
+
+    @Bean
+    public GestionPagosUseCase gestionPagosUseCase(ReservaRepository reservaRepository, PagoRepository pagoRepository,
+                                                   FacturaRepository facturaRepository,
+                                                   ClienteRepository clienteRepository,
+                                                   ProveedorRepository proveedorRepository, PasarelaPagoPort pasarela,
+                                                   ConsultaPagosPort consultaPagos,
+                                                   ConsultaFacturasPort consultaFacturas,
+                                                   GeneradorFacturaPdfPort generadorPdf, Clock reloj) {
+        return transaccional(new GestionPagosService(reservaRepository, pagoRepository, facturaRepository,
+                clienteRepository, proveedorRepository, pasarela, consultaPagos, consultaFacturas, generadorPdf,
+                reloj), GestionPagosUseCase.class);
     }
 
     /** Envuelve el caso de uso en un proxy que abre y cierra la transacción en cada llamada. */
