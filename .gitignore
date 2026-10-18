@@ -25,3 +25,8 @@ uploads/
 logs/
 .DS_Store
 Thumbs.db
+
+docs/referencia/
+
+# Instrucciones locales para Claude Code (no van al repositorio)
+CLAUDE.md
