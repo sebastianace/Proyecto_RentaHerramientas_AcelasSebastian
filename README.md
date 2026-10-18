@@ -1,6 +1,6 @@
 # 🛠️ Plataforma de Renta de Herramientas y Equipos de Construcción
 
-API REST construida con **Spring Boot** para que proveedores publiquen su inventario de herramientas y equipos de construcción, y que los clientes puedan reservarlos, pagarlos y descargar su factura. Incluye panel por rol (Administrador, Proveedor, Cliente), control de disponibilidad, gestión de devoluciones y daños, y reportes de rentabilidad.
+**ObraYa** es una plataforma para que proveedores publiquen su inventario de herramientas y equipos de construcción, y que los clientes puedan reservarlos, pagarlos en línea y descargar su factura. Tiene una **API REST con Spring Boot** (arquitectura hexagonal + DDD, JWT, MySQL) y una **tienda virtual en HTML, CSS y JavaScript puro** con panel por rol (Administrador, Proveedor, Cliente): control de disponibilidad por fechas, entregas, devoluciones y daños, facturación automática en PDF y reportes de rentabilidad.
 
 > Proyecto principal del skill de Spring Boot — Campuslands.
 > Autor: **Sebastián Acelas**
@@ -17,9 +17,12 @@ API REST construida con **Spring Boot** para que proveedores publiquen su invent
 6. [Configuración (`application.yml`)](#-configuración)
 7. [Base de datos](#-base-de-datos)
 8. [Autenticación y roles](#-autenticación-y-roles)
-9. [Endpoints de la API](#-endpoints-de-la-api)
-10. [Flujo de trabajo con Git Flow](#-flujo-de-trabajo-con-git-flow)
-11. [Estado del proyecto](#-estado-del-proyecto)
+9. [Documentación con Swagger](#-documentación-con-swagger)
+10. [Endpoints de la API](#-endpoints-de-la-api)
+11. [Frontend](#️-frontend)
+12. [Pruebas](#-pruebas)
+13. [Flujo de trabajo con Git Flow](#-flujo-de-trabajo-con-git-flow)
+14. [Estado del proyecto](#-estado-del-proyecto)
 
 ---
 
@@ -36,7 +39,8 @@ API REST construida con **Spring Boot** para que proveedores publiquen su invent
 | Seguridad | Spring Security + JWT (jjwt) | 7.x / 0.13.0 |
 | Documentación API | springdoc-openapi (Swagger UI) | 3.1.0 |
 | Facturas PDF | OpenPDF | 2.0.3 |
-| Pruebas | JUnit 5, AssertJ, Mockito | gestionado por Spring Boot |
+| Pruebas | JUnit 5, AssertJ, Mockito, MockMvc | gestionado por Spring Boot |
+| Frontend | HTML, CSS y JavaScript puro (módulos ES) | — |
 | Build | Maven (multimódulo) | 3.9+ |
 
 ---
@@ -72,8 +76,11 @@ El enunciado pide separación en Controllers, Services, Repositories, DTOs y Ent
 ```
 Proyecto_RentaHerramientas_AcelasSebastian
 ├── pom.xml                         # Proyecto padre (packaging pom)
-├── database/                       # Script de creación de BD y usuario
-├── docs/                           # Diagrama relacional
+├── database/                       # Script de creación de las BD y el usuario
+├── docs/                           # Diagrama relacional, guía de examen, mapa del código y flujos
+│   ├── postman/                    # Colección de Postman
+│   └── pruebas/                    # Script de PowerShell que recorre el flujo completo
+├── frontend/                       # Tienda y paneles en HTML, CSS y JavaScript puro
 ├── domain/                         # Núcleo del negocio (Java puro)
 │   └── src/main/java/com/rentaherramientas/domain
 │       ├── model
@@ -341,6 +348,20 @@ Todos los errores siguen el estándar **ProblemDetail (RFC 9457)**:
 | 404 | El recurso no existe |
 | 409 | Dato duplicado (email, documento, NIT) |
 | 422 | Regla de negocio incumplida |
+
+---
+
+## 📘 Documentación con Swagger
+
+Con la app corriendo: **`http://localhost:8080/swagger-ui.html`** (JSON en `/v3/api-docs`).
+
+- Cada endpoint tiene descripción, parámetros, ejemplos de petición (`@Schema(example = ...)`) y sus respuestas.
+- **Todos los errores** (400, 401, 403, 404, 409, 422, 500) se documentan con el esquema real **`ProblemDetail`** y un
+  ejemplo por código (lo arma `OpenApiErroresConfig` para todas las operaciones).
+- Las rutas públicas aparecen **sin candado**; las protegidas documentan 401 y 403.
+- **Para probar rutas protegidas:** ejecuta `POST /api/v1/auth/login`, copia el `token` y pégalo en **Authorize**
+  (sin escribir "Bearer"). Con `persist-authorization: true` el token queda guardado en el navegador: si vence (60 min),
+  haz *Logout* en Authorize y vuelve a iniciar sesión.
 
 ---
 
@@ -651,16 +672,79 @@ GET /api/v1/reportes/resumen
 
 ---
 
-## 🧪 Pruebas de punta a punta
+## 🖥️ Frontend
 
-El script [`docs/pruebas/flujo-completo.ps1`](docs/pruebas/flujo-completo.ps1) recorre todo el ciclo contra la API
-en ejecución (login de los 3 roles, reserva, aprobación, pago rechazado y aprobado, factura en PDF, entrega,
-devolución con daño GRAVE, validación del ADMIN, incidencias y reportes) y verifica también los casos que **deben
-fallar** (401, 403, 409, 422), incluido un token con el rol cambiado a ADMIN.
+Tienda virtual **ObraYa** en `frontend/` (HTML, CSS y JavaScript puro, sin frameworks). Detalle completo en
+[`frontend/README.md`](frontend/README.md).
+
+1. Arranca el backend (`mvn -pl infrastructure spring-boot:run`).
+2. Abre `frontend/` con **Live Server** de VS Code (puerto 5500, permitido por CORS) y entra a `index.html`.
+3. En **Ingresar** hay botones para entrar con el cliente, el proveedor o el administrador de prueba.
+
+| Rol | Qué puede hacer en el frontend |
+|---|---|
+| Visitante | Catálogo con filtros (categoría, ciudad, precio, texto), disponibilidad real por fechas, calendario de disponibilidad y carrito con total en vivo |
+| CLIENTE | Solicitar reservas, pagarlas con la pasarela simulada, descargar facturas, ver historial, entregas y devoluciones |
+| PROVEEDOR | Reportes de su negocio, aprobar o rechazar solicitudes, registrar entregas y devoluciones con daños, inventario con fotos |
+| ADMIN | Tablero de la plataforma (ingresos, rentabilidad, alertas), usuarios, pagos, facturación, validar devoluciones, incidencias y categorías |
+
+Diseño propio responsivo (móvil, tableta y escritorio) con tema claro y oscuro.
+
+---
+
+## 🧪 Pruebas
+
+| Tipo | Qué cubre | Cómo se ejecuta |
+|---|---|---|
+| **Unitarias de dominio** (23) | `RangoFechas`, `Dinero`, ciclo de `Reserva`, entregas, devoluciones, daños e inventario. Java puro, sin Spring | `mvn test` |
+| **Casos de uso con Mockito** (19) | Disponibilidad y aprobación, pago aprobado/rechazado, daño grave, alcance de reportes. Los puertos se simulan | `mvn test` |
+| **Integración** (8) | App completa (Spring Security + JPA + MySQL) con MockMvc: JWT, rutas públicas y protegidas, validación y el flujo completo de alquiler | `mvn verify -Pintegracion` |
+| **Script de punta a punta** | 42 verificaciones contra la API en ejecución, incluidos los casos que deben fallar | `docs/pruebas/flujo-completo.ps1` |
+| **Postman** | 48 peticiones (GET, POST, PUT, PATCH, DELETE) con scripts que validan el código y encadenan los datos | `docs/postman/` |
+
+### Unitarias (no necesitan base de datos)
+
+```bash
+mvn test
+```
+
+`mvn clean install` también las ejecuta. Las de integración quedan excluidas por defecto porque necesitan MySQL.
+
+### Integración
+
+Usan una base aparte, **`renta_herramientas_test`**, para no tocar los datos de desarrollo. Cada prueba es
+`@Transactional`, así que al terminar se hace *rollback*. Preparación (una sola vez, como root de MySQL):
+
+```sql
+CREATE DATABASE IF NOT EXISTS renta_herramientas_test CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+GRANT ALL PRIVILEGES ON renta_herramientas_test.* TO 'renta_app'@'localhost';
+FLUSH PRIVILEGES;
+```
+
+(Estas líneas ya están en `database/00_create_database_and_user.sql`.) Luego:
+
+```bash
+mvn verify -Pintegracion
+```
+
+Flyway crea las tablas y carga los datos de prueba en la base de pruebas la primera vez. Las credenciales salen del
+mismo `.env`.
+
+### Script de punta a punta (PowerShell)
+
+Con la app corriendo, recorre login de los 3 roles, reserva, aprobación, pago rechazado y aprobado, factura en PDF,
+entrega, devolución con daño GRAVE, validación del ADMIN, incidencias y reportes. Además verifica los casos que
+**deben fallar** (401, 403, 409, 422), incluido un token con el rol cambiado a ADMIN.
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File docs\pruebas\flujo-completo.ps1
 ```
+
+### Postman
+
+Importa `docs/postman/RentaHerramientas.postman_collection.json` y ejecútala en orden con el **Collection Runner**.
+La variable `baseUrl` apunta a `http://localhost:8080`. Los logins guardan los JWT de los tres roles, y el flujo guarda
+`reservaId`, `facturaId`, `devolucionId` y `danoId` para las peticiones siguientes.
 
 ---
 
@@ -704,5 +788,5 @@ Ejemplo: `feat(reservas): validar disponibilidad antes de aprobar una reserva`
 - [x] Fase 5 — Pagos y facturación
 - [x] Fase 6 — Entregas, devoluciones y reportes de daños
 - [x] Fase 7 — Reportes y estadísticas
-- [ ] Fase 8 — Swagger, colección de Postman y pruebas
-- [ ] Fase 9 — Frontend
+- [x] Fase 8 — Swagger, colección de Postman y pruebas
+- [x] Fase 9 — Frontend
