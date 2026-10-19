@@ -83,6 +83,13 @@ app:
     revision-inicial: PT20S
     revision-cada: PT5M
 
+# springdoc 3.1.0 con Spring Boot 4 escribe un aviso por cada esquema 'integer' al generar /v3/api-docs
+# ("Cannot construct instance of HashSet"). Es un defecto conocido de la librería: la documentación sale completa
+# y correcta, así que solo se silencia ese logger para no llenar la consola.
+logging:
+  level:
+    org.springdoc.core.utils.SpringDocUtils: ERROR
+
 # Swagger / OpenAPI
 springdoc:
   api-docs:

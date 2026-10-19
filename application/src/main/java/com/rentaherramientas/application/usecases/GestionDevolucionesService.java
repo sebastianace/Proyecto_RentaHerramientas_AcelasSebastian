@@ -119,13 +119,14 @@ public class GestionDevolucionesService implements GestionDevolucionesUseCase {
         Reserva reserva = reservaRepository.bloquearPorId(reservaId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Reserva", reservaId));
         validarEsProveedorDe(reserva, solicitante);
+        // Se valida ANTES de modificar nada: una petición inválida no debe dejar la reserva a medio cambiar.
+        if (!cmd.danos().isEmpty() && cmd.estadoEquipo() != null && !cmd.estadoEquipo().admiteReporteDeDano()) {
+            throw new ReglaDeNegocioException("Si reportas daños, el estado del equipo no puede ser BUENO");
+        }
         reserva.registrarDevolucion();
         reservaRepository.guardar(reserva);
         Devolucion devolucion = devolucionRepository.guardar(Devolucion.confirmar(reserva, cmd.estadoEquipo(),
                 cmd.observaciones(), solicitante.usuarioId(), ahora()));
-        if (!cmd.danos().isEmpty() && !devolucion.admiteReporteDeDano()) {
-            throw new ReglaDeNegocioException("Si reportas daños, el estado del equipo no puede ser BUENO");
-        }
         for (ReportarDanoCommand dano : cmd.danos()) {
             registrarDano(devolucion, reserva, dano, solicitante);
         }
