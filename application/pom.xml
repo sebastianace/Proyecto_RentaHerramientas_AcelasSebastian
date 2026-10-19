@@ -7,7 +7,7 @@
     <parent>
         <groupId>com.rentaherramientas</groupId>
         <artifactId>renta-herramientas</artifactId>
-        <version>1.0.0-SNAPSHOT</version>
+        <version>1.0.0</version>
     </parent>
 
     <!-- Casos de uso. Depende SOLO del dominio; no conoce Spring, JPA ni HTTP -->
