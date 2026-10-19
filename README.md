@@ -204,13 +204,13 @@ máquina con Java 21, sin Maven ni instalar un servidor:
 
 ```bash
 mvn clean install -DskipTests
-java -jar infrastructure/target/infrastructure-1.0.0-SNAPSHOT.jar
+java -jar infrastructure/target/infrastructure-1.0.0.jar
 ```
 
 Ejecútalo **desde la raíz del proyecto**, para que encuentre el archivo `.env`. Para usar otro puerto:
 
 ```powershell
-$env:SERVER_PORT = "9090"; java -jar infrastructure\target\infrastructure-1.0.0-SNAPSHOT.jar
+$env:SERVER_PORT = "9090"; java -jar infrastructure\target\infrastructure-1.0.0.jar
 ```
 
 | Variable | Qué controla |
@@ -736,7 +736,7 @@ Diseño propio responsivo (móvil, tableta y escritorio) con tema claro y oscuro
 |---|---|---|
 | **Unitarias de dominio** (23) | `RangoFechas`, `Dinero`, ciclo de `Reserva`, entregas, devoluciones, daños e inventario. Java puro, sin Spring | `mvn test` |
 | **Casos de uso con Mockito** (19) | Disponibilidad y aprobación, pago aprobado/rechazado, daño grave, alcance de reportes. Los puertos se simulan | `mvn test` |
-| **Integración** (8) | App completa (Spring Security + JPA + MySQL) con MockMvc: JWT, rutas públicas y protegidas, validación y el flujo completo de alquiler | `mvn verify -Pintegracion` |
+| **Integración** (9) | App completa (Spring Security + JPA + MySQL) con MockMvc: JWT, rutas públicas y protegidas, validación y el flujo completo de alquiler | `mvn verify -Pintegracion` |
 | **Script de punta a punta** | 42 verificaciones contra la API en ejecución, incluidos los casos que deben fallar | `docs/pruebas/flujo-completo.ps1` |
 | **Postman** | 48 peticiones (GET, POST, PUT, PATCH, DELETE) con scripts que validan el código y encadenan los datos | `docs/postman/` |
 

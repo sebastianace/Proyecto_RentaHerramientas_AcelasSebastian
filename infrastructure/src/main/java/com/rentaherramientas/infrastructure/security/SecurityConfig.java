@@ -1,5 +1,7 @@
 package com.rentaherramientas.infrastructure.security;
 
+import com.rentaherramientas.infrastructure.adapters.outbound.persistence.entities.UsuarioEntity;
+import com.rentaherramientas.infrastructure.adapters.outbound.persistence.repositories.UsuarioJpaRepository;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -48,7 +50,8 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtTokenProvider tokenProvider,
                                                    RestAuthenticationEntryPoint authenticationEntryPoint,
-                                                   RestAccessDeniedHandler accessDeniedHandler) throws Exception {
+                                                   RestAccessDeniedHandler accessDeniedHandler,
+                                                   UsuarioJpaRepository usuarios) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
@@ -70,7 +73,8 @@ public class SecurityConfig {
                         .requestMatchers(RUTAS_SWAGGER).permitAll()
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
-                .addFilterBefore(new JwtValidationFilter(tokenProvider), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtValidationFilter(tokenProvider,
+                        id -> usuarios.findById(id).map(UsuarioEntity::isActivo).orElse(false)), UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

@@ -11,6 +11,7 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.function.Predicate;
 
 /**
  * Filtro que se ejecuta una vez por petición: lee el header "Authorization: Bearer &lt;token&gt;",
@@ -25,9 +26,11 @@ public class JwtValidationFilter extends OncePerRequestFilter {
     private static final String PREFIJO = "Bearer ";
 
     private final JwtTokenProvider tokenProvider;
+    private final Predicate<Long> usuarioActivo;
 
-    public JwtValidationFilter(JwtTokenProvider tokenProvider) {
+    public JwtValidationFilter(JwtTokenProvider tokenProvider, Predicate<Long> usuarioActivo) {
         this.tokenProvider = tokenProvider;
+        this.usuarioActivo = usuarioActivo;
     }
 
     @Override
@@ -36,7 +39,9 @@ public class JwtValidationFilter extends OncePerRequestFilter {
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (header != null && header.startsWith(PREFIJO)) {
             String token = header.substring(PREFIJO.length()).trim();
-            tokenProvider.validar(token).ifPresent(usuario -> {
+            // Además de la firma y la expiración, se verifica que el usuario siga activo: si el admin lo desactiva,
+            // pierde el acceso de inmediato y no cuando venza su token.
+            tokenProvider.validar(token).filter(usuario -> usuarioActivo.test(usuario.id())).ifPresent(usuario -> {
                 UsernamePasswordAuthenticationToken autenticacion =
                         UsernamePasswordAuthenticationToken.authenticated(usuario, null, usuario.authorities());
                 autenticacion.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

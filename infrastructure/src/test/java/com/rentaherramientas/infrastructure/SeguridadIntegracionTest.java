@@ -7,6 +7,7 @@ import org.springframework.http.MediaType;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -51,6 +52,19 @@ class SeguridadIntegracionTest extends IntegracionBase {
                 .encodeToString(payload.getBytes(StandardCharsets.UTF_8)) + "." + partes[2];
 
         mvc.perform(get("/api/v1/clientes").header("Authorization", bearer(falso)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @DisplayName("Si el ADMIN desactiva a un usuario, su token deja de funcionar de inmediato (401)")
+    void usuarioDesactivadoPierdeAcceso() throws Exception {
+        String cliente = token(CLIENTE);
+        mvc.perform(get("/api/v1/reservas").header("Authorization", bearer(cliente))).andExpect(status().isOk());
+
+        mvc.perform(delete("/api/v1/clientes/1").header("Authorization", bearer(token(ADMIN))))
+                .andExpect(status().isNoContent());
+
+        mvc.perform(get("/api/v1/reservas").header("Authorization", bearer(cliente)))
                 .andExpect(status().isUnauthorized());
     }
 
