@@ -471,7 +471,7 @@ Las imágenes subidas se guardan en `MEDIA_BASE_PATH` y se sirven públicamente 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
 | GET | `/api/v1/herramientas/{id}/disponibilidad?fechaInicio=&fechaFin=` | Público | Unidades libres en un rango de fechas |
-| POST | `/api/v1/reservas/cotizacion` | Autenticado | Calcula días, subtotal, IVA y total sin guardar |
+| POST | `/api/v1/reservas/cotizacion` | Público | Calcula días, subtotal, IVA y total sin guardar (el carrito de la tienda) |
 | POST | `/api/v1/reservas` | CLIENTE | Solicitar reserva (queda `PENDIENTE`) |
 | GET | `/api/v1/reservas?estado=` | Autenticado | Historial: el cliente ve las suyas, el proveedor las de su inventario, el ADMIN todas |
 | GET | `/api/v1/reservas/{id}` | Dueño, ADMIN | Detalle |
