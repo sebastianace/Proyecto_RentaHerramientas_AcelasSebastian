@@ -1,0 +1,24 @@
+# =====================================================================
+# Perfil de DESARROLLO (máquina local)
+# =====================================================================
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/renta_herramientas?serverTimezone=America/Bogota&useSSL=false&allowPublicKeyRetrieval=true}
+
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        "[format_sql]": true
+
+  flyway:
+    # En dev, además del esquema (db/migration), se cargan los datos de prueba (db/seed).
+    # En prod solo se aplica db/migration: los datos de prueba nunca llegan a producción.
+    locations:
+      - classpath:db/migration
+      - classpath:db/seed
+
+logging:
+  level:
+    com.rentaherramientas: DEBUG
+    org.flywaydb: INFO
