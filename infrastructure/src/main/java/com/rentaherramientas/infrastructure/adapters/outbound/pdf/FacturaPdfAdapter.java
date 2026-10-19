@@ -28,7 +28,7 @@ import java.util.Locale;
 @Component
 public class FacturaPdfAdapter implements GeneradorFacturaPdfPort {
 
-    private static final String MARCA = "Renta de Herramientas";
+    private static final String MARCA = "ObraYa";
     private static final Locale COLOMBIA = Locale.of("es", "CO");
     private static final DateTimeFormatter FECHA = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter FECHA_HORA = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");

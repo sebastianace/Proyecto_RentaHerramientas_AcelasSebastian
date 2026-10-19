@@ -1,0 +1,17 @@
+# =====================================================================
+# Perfil de PRUEBAS DE INTEGRACIÓN
+# Usa una base de datos aparte (renta_herramientas_test) para no tocar los datos de desarrollo.
+# Se activa junto con "dev" para cargar los mismos datos de prueba (seeds V6–V9) con Flyway.
+# Las credenciales (DB_USERNAME, DB_PASSWORD, JWT_SECRET) salen del mismo .env de la raíz.
+# Cada prueba es @Transactional: al terminar se hace rollback y la base queda igual.
+# =====================================================================
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/renta_herramientas_test?createDatabaseIfNotExist=true&serverTimezone=America/Bogota&useSSL=false&allowPublicKeyRetrieval=true
+  jpa:
+    show-sql: false
+
+logging:
+  level:
+    com.rentaherramientas: INFO
+    org.hibernate.SQL: WARN

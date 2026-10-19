@@ -203,3 +203,72 @@ utilidad) queda en la capa de aplicación, donde se puede probar con Mockito sin
 **Trampa que apareció:** los *text blocks* de Java (`"""`) eliminan los espacios al final de cada línea. Por eso
 `"WHERE """ + condicion` producía `WHEREr.estado` y MySQL respondía error de sintaxis. Se resolvió poniendo los
 espacios dentro de las constantes que se concatenan.
+
+---
+
+## Fase 8 — Pruebas y documentación
+
+**1. ¿Qué diferencia hay entre las pruebas de dominio, las de casos de uso y las de integración del proyecto?**
+*Dominio* (`ReservaTest`, `DineroTest`…): Java puro, prueban reglas sin Spring ni base de datos; corren en milisegundos.
+*Casos de uso* (`GestionPagosServiceTest`…): usan **Mockito** para simular los puertos (repositorios, pasarela) y
+verifican la orquestación, por ejemplo que **nunca se llame a la pasarela** si la reserva no está APROBADA
+(`verifyNoInteractions(pasarela)`). *Integración* (`FlujoAlquilerIntegracionTest`): levantan la app completa (Spring
+Security, JPA, MySQL) y hacen peticiones HTTP con MockMvc; prueban que todas las piezas encajan.
+
+**2. ¿Por qué las pruebas de integración no ensucian la base de datos y por qué no corren con `mvn test`?**
+Usan una base aparte (`renta_herramientas_test`) y cada prueba es `@Transactional`: al terminar se hace **rollback**.
+No corren por defecto porque necesitan MySQL con esa base; se excluyen con `@Tag("integracion")` en el `pom` y se
+activan con `mvn verify -Pintegracion`. Así `mvn clean install` funciona en cualquier máquina.
+
+**3. ¿Cómo se arma MockMvc sin la dependencia `spring-security-test`, y por qué importa?**
+`MockMvcBuilders.webAppContextSetup(contexto).addFilters(springSecurityFilterChain)`. Se le agrega la cadena de
+filtros de Spring Security para que cada petición pase por el `JwtValidationFilter` igual que en producción; sin eso
+la prueba no comprobaría la seguridad.
+
+**4. ¿Qué arregló `OpenApiErroresConfig` en Swagger?**
+springdoc mostraba en los 401/403/404/422 el esquema del 200, que es falso. Un `OpenApiCustomizer` recorre todas las
+operaciones y pone en cada 4xx/5xx el esquema `ProblemDetail` con un ejemplo realista, agrega 401/403 a las rutas
+protegidas y quita el candado a las públicas. Se hace en un solo lugar en vez de repetir anotaciones en 60 endpoints.
+
+---
+
+## Fase 9 — Frontend
+
+**1. Si un usuario cambia en `localStorage` su rol de CLIENTE a ADMIN, ¿qué consigue?**
+Solo ver el menú del panel de ADMIN. Cada petición lleva el **JWT original**, cuyo rol está firmado por el servidor:
+`@PreAuthorize("hasRole('ADMIN')")` responde 403 y el panel muestra el error. El rol en el navegador solo decide qué
+pantalla dibujar; quien autoriza es siempre el backend.
+
+**2. ¿Qué es `esc()` y por qué todo dato de la API pasa por ahí?**
+Escapa `< > & " '` antes de insertar texto con `innerHTML`. Si un proveedor registra una herramienta llamada
+`<img src=x onerror=alert(1)>`, sin `esc()` ese código se ejecutaría en el navegador de cada cliente (XSS) y podría
+robar su token. Con `esc()` se muestra como texto.
+
+**3. ¿Por qué la factura se descarga con `fetch` + `Blob` y no con un enlace `<a href>`?**
+Porque el endpoint del PDF está protegido y un enlace normal no envía el header `Authorization: Bearer`. `descargar()`
+hace la petición con el token, recibe los bytes, crea una URL temporal con `URL.createObjectURL` y simula el clic.
+
+**4. ¿Qué pasa en el frontend cuando el token vence?**
+La API responde 401. `api.js` lo detecta, cierra la sesión (`sesion.cerrar()`) y lleva a `ingresar.html?expirada=1`
+recordando la página en `volver`; al iniciar sesión de nuevo regresa a donde estaba.
+
+---
+
+## Preguntas por archivo ("¿qué hace y por qué está ahí?")
+
+| Archivo | Respuesta modelo corta |
+|---|---|
+| `UseCaseConfig` | Crea los casos de uso con `new` (porque `application` no tiene Spring) y los envuelve en un proxy con `TransactionInterceptor`: los métodos `obtener*/listar*/consultar*/cotizar*/descargar*` son de solo lectura; el resto, lectura y escritura. Está en `infrastructure/config` porque es "cableado" de Spring. |
+| `Reserva` | Agregado raíz del alquiler: calcula totales y controla las transiciones de estado con métodos de negocio (`aprobar`, `confirmarPago`…), que validan el estado actual. Está en `domain` porque son reglas puras del negocio. |
+| `ReservaRepository` vs. `ReservaJpaRepository` | El primero es el **puerto** (interfaz en el dominio: qué se necesita). El segundo es Spring Data (cómo se consulta). `ReservaRepositoryAdapter` une ambos y traduce entidad ↔ dominio. |
+| `ConsultaReservasPort` | Puerto de **lectura** (CQRS ligero): devuelve `ReservaResult` con cliente, proveedor y detalles en una consulta optimizada (`@EntityGraph`), sin pasar por el agregado. |
+| `JwtValidationFilter` | Filtro que corre una vez por petición: lee el Bearer, valida firma y expiración y pone el usuario en el `SecurityContext`. Está en `security` porque es infraestructura de Spring Security. |
+| `GlobalExceptionHandler` | Traduce excepciones del dominio y de la aplicación a `ProblemDetail` con el código HTTP correcto. Está en `adapters/inbound` porque es parte de la entrada HTTP. |
+| `PasarelaPagoSimuladaAdapter` | Implementa `PasarelaPagoPort`. Es un adaptador de salida: para usar Wompi se escribe otro adaptador del mismo puerto y el caso de uso no cambia. |
+| `VencimientoReservasJob` | Adaptador de **entrada** (no HTTP): cada 5 minutos llama al caso de uso que vence las reservas APROBADAS sin pago. |
+| `Dinero` | Value object: monto en `BigDecimal` con 2 decimales, inmutable. Evita los errores de `double` con dinero y centraliza el cálculo del IVA. |
+| `TiempoConfig` | Publica un `Clock` de Bogotá. Los casos de uso piden la hora al `Clock` y no a `LocalDate.now()`, así en las pruebas se fija "hoy" en una fecha conocida. |
+| `ConsultaReportesAdapter` | SQL nativo con `NamedParameterJdbcTemplate` para los reportes: agregaciones que no corresponden a ninguna entidad. |
+| `OpenApiErroresConfig` | Personaliza Swagger para que todos los errores muestren `ProblemDetail`. |
+| `V3__create_rental_tables.sql` | Migración Flyway que crea reservas, detalles, entregas, devoluciones y daños con sus `CHECK` y llaves foráneas. Nunca se edita: un cambio va en una V10 nueva. |
+| `frontend/assets/js/api.js` | Cliente HTTP del frontend: agrega el JWT, convierte errores ProblemDetail y maneja el 401. |
