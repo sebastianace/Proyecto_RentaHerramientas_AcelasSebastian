@@ -736,7 +736,7 @@ Diseño propio responsivo (móvil, tableta y escritorio) con tema claro y oscuro
 |---|---|---|
 | **Unitarias de dominio** (23) | `RangoFechas`, `Dinero`, ciclo de `Reserva`, entregas, devoluciones, daños e inventario. Java puro, sin Spring | `mvn test` |
 | **Casos de uso con Mockito** (19) | Disponibilidad y aprobación, pago aprobado/rechazado, daño grave, alcance de reportes. Los puertos se simulan | `mvn test` |
-| **Integración** (8) | App completa (Spring Security + JPA + MySQL) con MockMvc: JWT, rutas públicas y protegidas, validación y el flujo completo de alquiler | `mvn verify -Pintegracion` |
+| **Integración** (9) | App completa (Spring Security + JPA + MySQL) con MockMvc: JWT, rutas públicas y protegidas, validación y el flujo completo de alquiler | `mvn verify -Pintegracion` |
 | **Script de punta a punta** | 42 verificaciones contra la API en ejecución, incluidos los casos que deben fallar | `docs/pruebas/flujo-completo.ps1` |
 | **Postman** | 48 peticiones (GET, POST, PUT, PATCH, DELETE) con scripts que validan el código y encadenan los datos | `docs/postman/` |
 
