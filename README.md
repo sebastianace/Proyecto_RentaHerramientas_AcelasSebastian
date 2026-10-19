@@ -185,6 +185,44 @@ mvn -pl infrastructure spring-boot:run
 
 La API queda disponible en `http://localhost:8080` y la documentación interactiva en **`http://localhost:8080/swagger-ui.html`**.
 
+### 6. Despliegue con Tomcat embebido
+
+La aplicación **no necesita instalar Apache Tomcat**: Spring Boot trae **Tomcat 11 embebido** dentro del propio
+proyecto (dependencia `spring-boot-starter-webmvc`) y lo arranca al iniciar. El servidor se configura en
+`application.yml`:
+
+```yaml
+server:
+  port: ${SERVER_PORT:8080}      # puerto del servidor embebido (se cambia en el .env)
+  error:
+    include-stacktrace: never    # nunca se expone la traza de un error al cliente
+```
+
+Además de `spring-boot:run`, el proyecto se empaqueta en un **único `.jar` ejecutable** que lleva dentro Tomcat y todas
+las dependencias (lo genera `spring-boot-maven-plugin` con el objetivo `repackage`). Así se despliega en cualquier
+máquina con Java 21, sin Maven ni instalar un servidor:
+
+```bash
+mvn clean install -DskipTests
+java -jar infrastructure/target/infrastructure-1.0.0-SNAPSHOT.jar
+```
+
+Ejecútalo **desde la raíz del proyecto**, para que encuentre el archivo `.env`. Para usar otro puerto:
+
+```powershell
+$env:SERVER_PORT = "9090"; java -jar infrastructure\target\infrastructure-1.0.0-SNAPSHOT.jar
+```
+
+| Variable | Qué controla |
+|---|---|
+| `SERVER_PORT` | Puerto de Tomcat (por defecto 8080) |
+| `SPRING_PROFILES_ACTIVE` | `dev` (carga los datos de prueba) o `prod` (solo el esquema, sin datos de prueba) |
+| `DB_URL`, `DB_USERNAME`, `DB_PASSWORD` | Conexión a MySQL |
+| `CORS_ALLOWED_ORIGINS` | Orígenes del frontend autorizados (Live Server usa `http://localhost:5500`) |
+
+El frontend es estático (HTML, CSS y JavaScript): se abre con Live Server o con cualquier servidor de archivos y llama
+a esta API. Si la API usa otro puerto, abre la tienda con `?api=http://localhost:9090`.
+
 ---
 
 ## ⚙️ Configuración
