@@ -92,10 +92,13 @@ public class GestionDevolucionesService implements GestionDevolucionesUseCase {
         if (entregaRepository.existePorReserva(reservaId)) {
             throw new ConflictoException("La reserva " + reserva.getCodigo() + " ya tiene una entrega registrada");
         }
+        // Primero se construye la entrega (valida la dirección) y solo después se cambia el estado de la reserva:
+        // así una petición inválida no deja la reserva a medio modificar.
+        Entrega entrega = Entrega.registrar(reserva, cmd.tipo(), cmd.direccion(), cmd.observaciones(),
+                solicitante.usuarioId(), ahora());
         reserva.registrarEntrega();
         reservaRepository.guardar(reserva);
-        entregaRepository.guardar(Entrega.registrar(reserva, cmd.tipo(), cmd.direccion(), cmd.observaciones(),
-                solicitante.usuarioId(), ahora()));
+        entregaRepository.guardar(entrega);
         return consulta.entregaDeReserva(reservaId)
                 .orElseThrow(() -> new RecursoNoEncontradoException("Entrega de la reserva", reservaId));
     }
