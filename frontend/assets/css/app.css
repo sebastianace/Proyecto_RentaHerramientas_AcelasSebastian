@@ -159,7 +159,9 @@ h3 { font-size: 1.3rem; }
   outline: 0; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 .input[aria-invalid="true"], .select[aria-invalid="true"] { border-color: var(--bad); }
-.field-error { color: var(--bad); font-size: .8rem; }
+.field-error { color: var(--bad); font-size: .8rem; font-weight: 500; }
+.input.rechazo { animation: rechazo .35s; border-color: var(--bad); }
+@keyframes rechazo { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
 .form-grid .full { grid-column: 1 / -1; }
 .check { display: inline-flex; align-items: center; gap: .5rem; font-size: .9rem; cursor: pointer; }
