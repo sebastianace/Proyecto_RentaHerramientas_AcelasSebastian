@@ -7,7 +7,7 @@ Tienda virtual para alquilar herramientas y equipos de construcción. Está hech
 
 1. Arranca el backend (`mvn -pl infrastructure spring-boot:run`, queda en `http://localhost:8080`).
 2. Abre la carpeta `frontend/` con **Live Server** de VS Code (puerto **5500**, que es el origen permitido por CORS).
-   También sirve `python -m http.server 5500` dentro de `frontend/`.
+   También sirve `python -m http.server 5500` dentro de `frontend/` (en Ubuntu: `python3 -m http.server 5500`).
 3. Entra a `http://127.0.0.1:5500/index.html`.
 
 Si el backend corre en otro puerto, abre cualquier página con `?api=http://localhost:8081`: la URL queda guardada
@@ -31,7 +31,8 @@ terminada en `1111` rechazada por el banco. PSE y Nequi siempre se aprueban.
 | `index.html` | Tienda: buscador, categorías, catálogo con filtros (texto, categoría, ciudad, precio máximo, fechas) y paginación. Con fechas, cada tarjeta muestra las unidades libres reales |
 | `herramienta.html?id=` | Detalle: galería, ficha técnica, **calendario de disponibilidad** de 5 semanas, cantidad y **cotización en vivo** |
 | `reserva.html` | Checkout: carrito, fechas, notas y total calculado por el servidor (`POST /reservas/cotizacion`) |
-| `ingresar.html` | Ingreso y registro de clientes |
+| `ingresar.html` | Ingreso, registro de clientes y "¿Olvidaste tu contraseña?" |
+| `restablecer.html?token=` | Crear la contraseña nueva desde el enlace de recuperación |
 | `panel.html` | Panel según el rol (ver abajo) |
 
 **Panel del CLIENTE:** resumen, mis reservas (línea de tiempo, pagar, cancelar, descargar factura), pagos, facturas y perfil.
@@ -62,6 +63,9 @@ frontend/
 ## Decisiones (para explicar en la sustentación)
 
 - **JavaScript puro con módulos ES.** Cada archivo importa solo lo que usa; no hace falta compilar.
+- **Filtros de escritura (`data-solo`):** en nombres y ciudad no se pueden teclear números, el teléfono acepta solo
+  10 dígitos y la cédula solo números. Es una ayuda: la regla de verdad la valida el backend y su error aparece debajo
+  de cada campo.
 - **Todo dato de la API pasa por `esc()` antes de ir al HTML.** Evita XSS: si alguien registra una herramienta con
   `<script>` en el nombre, se muestra como texto.
 - **El rol en el navegador solo decide qué pantalla mostrar.** Quien autoriza es el backend, que valida la firma del
