@@ -82,6 +82,11 @@ app:
     # Cada cuánto se buscan reservas aprobadas sin pago para vencerlas
     revision-inicial: PT20S
     revision-cada: PT5M
+  recuperacion:
+    # Cuánto dura el enlace para recuperar la contraseña (solo sirve una vez)
+    vigencia: PT30M
+    # Página del frontend que recibe el token. Cámbiala si el frontend corre en otra dirección
+    url-restablecer: ${RECUPERACION_URL:http://localhost:5500/restablecer.html}
 
 # springdoc 3.1.0 con Spring Boot 4 escribe un aviso por cada esquema 'integer' al generar /v3/api-docs
 # ("Cannot construct instance of HashSet"). Es un defecto conocido de la librería: la documentación sale completa
