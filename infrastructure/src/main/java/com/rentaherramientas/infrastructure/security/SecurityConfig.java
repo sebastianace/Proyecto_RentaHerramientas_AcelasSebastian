@@ -63,7 +63,8 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/registro").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/auth/login", "/api/v1/auth/registro",
+                                "/api/v1/auth/recuperar", "/api/v1/auth/restablecer").permitAll()
                         // Cotizar es público, como en cualquier tienda: solo calcula con precios públicos, no guarda nada
                         .requestMatchers(HttpMethod.POST, "/api/v1/reservas/cotizacion").permitAll()
                         // El orden importa: la primera regla que coincide gana. El inventario va ANTES

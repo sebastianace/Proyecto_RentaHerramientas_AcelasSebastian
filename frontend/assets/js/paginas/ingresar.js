@@ -55,7 +55,39 @@ async function completarSesion(autenticacion) {
   location.href = destino();
 }
 
-for (const form of $$('[data-form]')) {
+// ---------- Olvidé mi contraseña ----------
+
+$('[data-ir-recuperar]').addEventListener('click', () => {
+  const f = $('[data-form="recuperar"]');
+  f.email.value = $('[data-form="login"]').email.value;
+  mostrarTab('recuperar');
+  f.email.focus();
+});
+$('[data-volver-login]').addEventListener('click', () => mostrarTab('login'));
+
+$('[data-form="recuperar"]').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const boton = $('button[type="submit"]', form);
+  const error = $('[data-error]', form);
+  const ok = $('[data-ok]', form);
+  error.classList.add('hidden');
+  ok.classList.add('hidden');
+  cargando(boton, true);
+  try {
+    const r = await post('/auth/recuperar', { email: form.email.value.trim() });
+    ok.innerHTML = `<div><b>Revisa tu correo.</b><br>${esc(r.mensaje)}.</div>`;
+    ok.classList.remove('hidden');
+  } catch (err) {
+    mostrarErrorEnFormulario(form, error, err);
+  } finally {
+    cargando(boton, false);
+  }
+});
+
+// ---------- Ingreso y registro ----------
+
+for (const form of $$('[data-form="login"], [data-form="registro"]')) {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const boton = $('button[type="submit"]', form);

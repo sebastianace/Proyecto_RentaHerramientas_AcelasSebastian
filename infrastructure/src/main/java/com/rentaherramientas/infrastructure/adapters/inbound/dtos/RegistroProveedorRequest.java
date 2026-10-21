@@ -22,12 +22,12 @@ public record RegistroProveedorRequest(
 
         @Schema(example = "Andrés")
         @NotBlank(message = "Los nombres del contacto son obligatorios")
-        @Size(max = 80)
+        @Pattern(regexp = ValidacionesComunes.REGEX_NOMBRE, message = ValidacionesComunes.MENSAJE_NOMBRES)
         String nombres,
 
         @Schema(example = "Rojas Díaz")
         @NotBlank(message = "Los apellidos del contacto son obligatorios")
-        @Size(max = 80)
+        @Pattern(regexp = ValidacionesComunes.REGEX_NOMBRE, message = ValidacionesComunes.MENSAJE_APELLIDOS)
         String apellidos,
 
         @Schema(example = "3109876543")
@@ -36,12 +36,12 @@ public record RegistroProveedorRequest(
 
         @Schema(example = "Equipos del Norte S.A.S.")
         @NotBlank(message = "La razón social es obligatoria")
-        @Size(max = 150)
+        @Pattern(regexp = ValidacionesComunes.REGEX_RAZON_SOCIAL, message = ValidacionesComunes.MENSAJE_RAZON_SOCIAL)
         String razonSocial,
 
         @Schema(example = "900111222-3")
         @NotBlank(message = "El NIT es obligatorio")
-        @Pattern(regexp = "^\\d{6,12}-\\d$", message = "El NIT debe tener el formato 900123456-7")
+        @Pattern(regexp = "^\\d{9,10}-\\d$", message = "El NIT solo admite números con su dígito de verificación: 900123456-7")
         String nit,
 
         @Schema(example = "Cra 15 # 30-20")
@@ -51,7 +51,7 @@ public record RegistroProveedorRequest(
 
         @Schema(example = "Bucaramanga")
         @NotBlank(message = "La ciudad es obligatoria")
-        @Size(max = 80)
+        @Pattern(regexp = ValidacionesComunes.REGEX_CIUDAD, message = ValidacionesComunes.MENSAJE_CIUDAD)
         String ciudad,
 
         @Schema(example = "Alquiler de maquinaria liviana para obra civil")

@@ -68,10 +68,10 @@ async function perfil(main) {
   $('[data-editar]', main).addEventListener('click', () => formularioModal({
     titulo: 'Editar mis datos',
     campos: `<div class="form-grid">
-      <label class="field"><span>Nombres</span><input class="input" name="nombres" value="${esc(c.usuario.nombres)}" required></label>
-      <label class="field"><span>Apellidos</span><input class="input" name="apellidos" value="${esc(c.usuario.apellidos)}" required></label>
-      <label class="field"><span>Teléfono</span><input class="input" name="telefono" value="${esc(c.usuario.telefono || '')}"></label>
-      <label class="field"><span>Ciudad</span><input class="input" name="ciudad" value="${esc(c.ciudad)}" required></label>
+      <label class="field"><span>Nombres</span><input class="input" name="nombres" data-solo="letras" value="${esc(c.usuario.nombres)}" required></label>
+      <label class="field"><span>Apellidos</span><input class="input" name="apellidos" data-solo="letras" value="${esc(c.usuario.apellidos)}" required></label>
+      <label class="field"><span>Teléfono</span><input class="input" name="telefono" data-solo="telefono" inputmode="numeric" maxlength="10" placeholder="3001234567" value="${esc(c.usuario.telefono || '')}"></label>
+      <label class="field"><span>Ciudad</span><input class="input" name="ciudad" data-solo="letras" value="${esc(c.ciudad)}" required></label>
       <label class="field full"><span>Dirección</span><input class="input" name="direccion" value="${esc(c.direccion)}" required></label></div>`,
     enviar: async (datos) => {
       await put(`/clientes/${id}`, datos);

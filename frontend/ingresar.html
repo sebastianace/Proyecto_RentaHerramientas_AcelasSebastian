@@ -39,26 +39,37 @@
         <label class="field"><span>Contraseña</span><input class="input" type="password" name="password" autocomplete="current-password" required></label>
         <div class="notice bad hidden" data-error></div>
         <button class="btn btn-primary btn-lg btn-block" type="submit">Ingresar</button>
+        <button class="btn-text" type="button" data-ir-recuperar style="align-self:center">¿Olvidaste tu contraseña?</button>
         <div class="stack" style="gap:.6rem;margin-top:.5rem">
           <span class="label">Usuarios de prueba · clave Renta2026*</span>
           <div class="demo-users" data-demo></div>
         </div>
       </form>
 
+      <form class="stack hidden" data-form="recuperar" novalidate>
+        <div><h2>Recupera tu contraseña</h2><p class="muted">Escribe el correo de tu cuenta y te enviaremos un enlace para crear una nueva. El enlace vence en 30 minutos y solo sirve una vez.</p></div>
+        <label class="field"><span>Correo</span><input class="input" type="email" name="email" autocomplete="email" required></label>
+        <div class="notice bad hidden" data-error></div>
+        <div class="notice ok hidden" data-ok></div>
+        <button class="btn btn-primary btn-lg btn-block" type="submit">Enviar enlace</button>
+        <button class="btn-text" type="button" data-volver-login style="align-self:center">Volver a ingresar</button>
+      </form>
+
       <form class="stack hidden" data-form="registro" novalidate>
         <div><h2>Crea tu cuenta</h2><p class="muted">Cuenta de cliente para alquilar herramientas. Los proveedores los registra el administrador.</p></div>
         <div class="form-grid">
-          <label class="field"><span>Nombres</span><input class="input" name="nombres" autocomplete="given-name" required></label>
-          <label class="field"><span>Apellidos</span><input class="input" name="apellidos" autocomplete="family-name" required></label>
+          <label class="field"><span>Nombres</span><input class="input" name="nombres" autocomplete="given-name" data-solo="letras" required></label>
+          <label class="field"><span>Apellidos</span><input class="input" name="apellidos" autocomplete="family-name" data-solo="letras" required></label>
           <label class="field full"><span>Correo</span><input class="input" type="email" name="email" autocomplete="email" required></label>
           <label class="field full"><span>Contraseña</span><input class="input" type="password" name="password" autocomplete="new-password" minlength="8" required>
             <small class="hint">Mínimo 8 caracteres, con al menos una letra y un número.</small></label>
           <label class="field"><span>Tipo de documento</span><select class="select" name="tipoDocumento">
             <option value="CC">Cédula de ciudadanía</option><option value="CE">Cédula de extranjería</option>
             <option value="NIT">NIT</option><option value="PASAPORTE">Pasaporte</option></select></label>
-          <label class="field"><span>Número de documento</span><input class="input" name="numeroDocumento" inputmode="numeric" required></label>
-          <label class="field"><span>Teléfono</span><input class="input" name="telefono" type="tel" autocomplete="tel" placeholder="3001234567"></label>
-          <label class="field"><span>Ciudad</span><input class="input" name="ciudad" autocomplete="address-level2" required></label>
+          <label class="field"><span>Número de documento</span><input class="input" name="numeroDocumento" data-solo="documento" maxlength="12" required></label>
+          <label class="field"><span>Teléfono</span><input class="input" name="telefono" type="tel" autocomplete="tel" data-solo="telefono" inputmode="numeric" maxlength="10" placeholder="3001234567">
+            <small class="hint">10 dígitos: celular (3…) o fijo (60…).</small></label>
+          <label class="field"><span>Ciudad</span><input class="input" name="ciudad" autocomplete="address-level2" data-solo="letras" required></label>
           <label class="field full"><span>Dirección</span><input class="input" name="direccion" autocomplete="street-address" required></label>
         </div>
         <div class="notice bad hidden" data-error></div>
