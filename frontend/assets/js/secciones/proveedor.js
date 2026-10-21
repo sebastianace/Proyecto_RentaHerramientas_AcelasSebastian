@@ -165,11 +165,11 @@ async function perfil(main) {
   $('[data-editar]', main).addEventListener('click', () => formularioModal({
     titulo: 'Editar datos de la empresa', ancho: true,
     campos: `<div class="form-grid">
-      <label class="field full"><span>Razón social</span><input class="input" name="razonSocial" value="${esc(p.razonSocial)}" required></label>
-      <label class="field"><span>Nombres del contacto</span><input class="input" name="nombres" value="${esc(p.usuario.nombres)}" required></label>
-      <label class="field"><span>Apellidos del contacto</span><input class="input" name="apellidos" value="${esc(p.usuario.apellidos)}" required></label>
-      <label class="field"><span>Teléfono</span><input class="input" name="telefono" value="${esc(p.usuario.telefono || '')}"></label>
-      <label class="field"><span>Ciudad</span><input class="input" name="ciudad" value="${esc(p.ciudad)}" required></label>
+      <label class="field full"><span>Razón social</span><input class="input" name="razonSocial" data-solo="empresa" value="${esc(p.razonSocial)}" required></label>
+      <label class="field"><span>Nombres del contacto</span><input class="input" name="nombres" data-solo="letras" value="${esc(p.usuario.nombres)}" required></label>
+      <label class="field"><span>Apellidos del contacto</span><input class="input" name="apellidos" data-solo="letras" value="${esc(p.usuario.apellidos)}" required></label>
+      <label class="field"><span>Teléfono</span><input class="input" name="telefono" data-solo="telefono" inputmode="numeric" maxlength="10" placeholder="3001234567" value="${esc(p.usuario.telefono || '')}"></label>
+      <label class="field"><span>Ciudad</span><input class="input" name="ciudad" data-solo="letras" value="${esc(p.ciudad)}" required></label>
       <label class="field full"><span>Dirección</span><input class="input" name="direccion" value="${esc(p.direccion)}" required></label>
       <label class="field full"><span>Descripción</span><textarea class="textarea" name="descripcion">${esc(p.descripcion || '')}</textarea></label></div>`,
     enviar: async (d) => { await put(`/proveedores/${id}`, d); toast('Datos actualizados', 'ok'); refrescar(); },

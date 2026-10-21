@@ -248,6 +248,124 @@
               }
             }
           ]
+        },
+        {
+          "name": "Registro con nombre con números, teléfono corto y cédula con letras → 400",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/registro",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "registro"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"prueba.validacion@gmail.com\",\n  \"password\": \"Clave2026\",\n  \"nombres\": \"Laura2\",\n  \"apellidos\": \"Pérez\",\n  \"telefono\": \"300123\",\n  \"tipoDocumento\": \"CC\",\n  \"numeroDocumento\": \"10987abc\",\n  \"direccion\": \"Calle 1 # 2-3\",\n  \"ciudad\": \"Bucaramanga1\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 400', () => pm.response.to.have.status(400));",
+                  "pm.test('Marca cada campo inválido', () => { const e = pm.response.json().errores; ['nombres','telefono','numeroDocumentoValido','ciudad'].forEach(c => pm.expect(e).to.have.property(c)); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Olvidé mi contraseña → 202 (el enlace aparece en la consola del backend)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/recuperar",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "recuperar"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"juanpablo.ardila@gmail.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 202', () => pm.response.to.have.status(202));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Restablecer con un token inválido → 422",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/restablecer",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "restablecer"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"token-inventado\",\n  \"password\": \"NuevaClave2026\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Responde 422', () => pm.response.to.have.status(422));"
+                ]
+              }
+            }
+          ]
         }
       ]
     },

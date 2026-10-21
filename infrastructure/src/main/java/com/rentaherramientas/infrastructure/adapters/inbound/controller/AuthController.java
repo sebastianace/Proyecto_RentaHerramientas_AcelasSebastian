@@ -3,7 +3,10 @@ package com.rentaherramientas.infrastructure.adapters.inbound.controller;
 import com.rentaherramientas.application.dtos.AutenticacionResult;
 import com.rentaherramientas.application.dtos.PerfilResult;
 import com.rentaherramientas.application.ports.in.AutenticacionUseCase;
+import com.rentaherramientas.application.ports.in.RecuperacionPasswordUseCase;
 import com.rentaherramientas.infrastructure.adapters.inbound.dtos.LoginRequest;
+import com.rentaherramientas.infrastructure.adapters.inbound.dtos.RecuperarPasswordRequest;
+import com.rentaherramientas.infrastructure.adapters.inbound.dtos.RestablecerPasswordRequest;
 import com.rentaherramientas.infrastructure.adapters.inbound.dtos.RegistroClienteRequest;
 import com.rentaherramientas.infrastructure.security.UsuarioAutenticado;
 import io.swagger.v3.oas.annotations.Operation;
@@ -20,6 +23,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 /**
  * Adaptador de entrada REST para autenticación. Solo traduce HTTP a casos de uso:
  * no contiene lógica de negocio.
@@ -30,9 +35,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AutenticacionUseCase autenticacion;
+    private final RecuperacionPasswordUseCase recuperacion;
 
-    public AuthController(AutenticacionUseCase autenticacion) {
+    public AuthController(AutenticacionUseCase autenticacion, RecuperacionPasswordUseCase recuperacion) {
         this.autenticacion = autenticacion;
+        this.recuperacion = recuperacion;
     }
 
     @PostMapping("/login")
@@ -54,6 +61,32 @@ public class AuthController {
     @ApiResponse(responseCode = "409", description = "El email o el documento ya están registrados")
     public AutenticacionResult registrar(@Valid @RequestBody RegistroClienteRequest request) {
         return autenticacion.registrarCliente(request.aCommand());
+    }
+
+    @PostMapping("/recuperar")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @SecurityRequirements
+    @Operation(summary = "Olvidé mi contraseña: pedir el enlace de recuperación",
+            description = "Si el correo pertenece a un usuario activo, se envía un enlace que vence en 30 minutos "
+                    + "(en desarrollo el correo se muestra en la consola del servidor). La respuesta es la misma "
+                    + "exista o no el correo, para no revelar qué cuentas están registradas")
+    @ApiResponse(responseCode = "202", description = "Solicitud recibida")
+    @ApiResponse(responseCode = "400", description = "Email con formato inválido")
+    public Map<String, String> recuperar(@Valid @RequestBody RecuperarPasswordRequest request) {
+        recuperacion.solicitarRecuperacion(request.email());
+        return Map.of("mensaje", "Si el correo está registrado, te enviamos un enlace para crear una nueva contraseña");
+    }
+
+    @PostMapping("/restablecer")
+    @SecurityRequirements
+    @Operation(summary = "Crear la contraseña nueva con el token del enlace",
+            description = "El token vence y solo se puede usar una vez")
+    @ApiResponse(responseCode = "200", description = "Contraseña actualizada")
+    @ApiResponse(responseCode = "400", description = "La contraseña no cumple el formato")
+    @ApiResponse(responseCode = "422", description = "El enlace no es válido, ya se usó o venció")
+    public Map<String, String> restablecer(@Valid @RequestBody RestablecerPasswordRequest request) {
+        recuperacion.restablecerPassword(request.token(), request.password());
+        return Map.of("mensaje", "Tu contraseña se actualizó. Ya puedes iniciar sesión");
     }
 
     @GetMapping("/me")

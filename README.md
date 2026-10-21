@@ -223,6 +223,48 @@ $env:SERVER_PORT = "9090"; java -jar infrastructure\target\infrastructure-1.0.0.
 El frontend es estático (HTML, CSS y JavaScript): se abre con Live Server o con cualquier servidor de archivos y llama
 a esta API. Si la API usa otro puerto, abre la tienda con `?api=http://localhost:9090`.
 
+### 7. Ejecutar en Ubuntu (Linux)
+
+El proyecto es multiplataforma. En Ubuntu (por ejemplo, los equipos de Campuslands) los pasos son:
+
+```bash
+# 1. Requisitos: Java 21 o superior, MySQL 8 y Git (Maven NO hace falta: se usa el wrapper ./mvnw)
+java -version
+sudo systemctl status mysql          # si no está iniciado: sudo systemctl start mysql
+
+# 2. Clonar el repositorio
+git clone https://github.com/sebastianace/Proyecto_RentaHerramientas_AcelasSebastian.git
+cd Proyecto_RentaHerramientas_AcelasSebastian
+
+# 3. Crear las bases y el usuario (cambia antes 'cambia_esta_clave' en el script)
+sudo mysql < database/00_create_database_and_user.sql
+
+# 4. Variables de entorno: copiar la plantilla y poner la misma clave en DB_PASSWORD
+cp .env.example .env
+openssl rand -base64 48              # pega el resultado en JWT_SECRET del .env
+nano .env
+
+# 5. Compilar (descarga Maven la primera vez) y ejecutar
+./mvnw clean install
+./mvnw -pl infrastructure spring-boot:run
+```
+
+Para el frontend, en otra terminal (CORS permite el puerto 5500):
+
+```bash
+cd frontend
+python3 -m http.server 5500
+# abrir http://localhost:5500/index.html
+```
+
+Notas para Linux:
+
+- Si `./mvnw` dice "Permission denied", ejecuta `chmod +x mvnw`.
+- MySQL en Linux distingue mayúsculas en los nombres de tabla; todas las tablas y consultas del proyecto están en
+  minúsculas, así que no hay que configurar nada.
+- `sudo mysql` entra como root con el usuario del sistema (instalación por defecto de Ubuntu). Si tu root tiene
+  contraseña, usa `mysql -u root -p < database/00_create_database_and_user.sql`.
+
 ---
 
 ## ⚙️ Configuración
@@ -414,6 +456,34 @@ La documentación completa, con ejemplos y la opción de probar cada endpoint, e
 | POST | `/api/v1/auth/login` | Público | Iniciar sesión |
 | POST | `/api/v1/auth/registro` | Público | Registrarse como cliente |
 | GET | `/api/v1/auth/me` | Autenticado | Perfil del usuario autenticado |
+| POST | `/api/v1/auth/recuperar` | Público | Olvidé mi contraseña: envía un enlace (responde igual exista o no el correo) |
+| POST | `/api/v1/auth/restablecer` | Público | Crea la contraseña nueva con el token del enlace |
+
+**Recuperar la contraseña olvidada.** En el ingreso, "¿Olvidaste tu contraseña?" pide el correo. Se genera un token
+aleatorio de 256 bits que **vence en 30 minutos y solo sirve una vez**; en la base de datos (tabla
+`tokens_recuperacion`, migración V10) se guarda solo su hash SHA-256. El correo sale por el puerto `EnvioCorreoPort`:
+en desarrollo lo implementa `CorreoConsolaAdapter`, que **muestra el correo con el enlace en la consola del backend**
+(igual que la pasarela de pagos simulada). Para producción basta con otro adaptador SMTP, sin cambiar los casos de uso.
+
+```json
+POST /api/v1/auth/recuperar          { "email": "juanpablo.ardila@gmail.com" }   → 202
+POST /api/v1/auth/restablecer        { "token": "<del enlace>", "password": "NuevaClave2026" }   → 200
+```
+
+**Reglas de formato de los datos personales** (registro y edición; responden 400 con el error de cada campo, y en el
+frontend no se pueden ni escribir los caracteres inválidos):
+
+| Campo | Regla |
+|---|---|
+| Nombres, apellidos | Solo letras (con tildes y ñ), espacios, punto, apóstrofo o guion. Nunca números |
+| Ciudad | Solo letras, espacios y punto (ej. "Bogotá D.C.") |
+| Teléfono | 10 dígitos colombianos: celular `3XXXXXXXXX` o fijo `60XXXXXXXX` |
+| Cédula (CC, CE) | Solo números, 6 a 10 dígitos |
+| NIT | Números con dígito de verificación: `900123456-7` |
+| Pasaporte | Letras y números, 6 a 12 |
+| Razón social | Letras, números y `. , & ' -` |
+| Categoría | Solo letras, espacios, comas y guiones |
+| Contraseña | 8 a 72 caracteres, con al menos una letra y un número |
 
 Ejemplo de login:
 
@@ -734,11 +804,11 @@ Diseño propio responsivo (móvil, tableta y escritorio) con tema claro y oscuro
 
 | Tipo | Qué cubre | Cómo se ejecuta |
 |---|---|---|
-| **Unitarias de dominio** (23) | `RangoFechas`, `Dinero`, ciclo de `Reserva`, entregas, devoluciones, daños e inventario. Java puro, sin Spring | `mvn test` |
-| **Casos de uso con Mockito** (19) | Disponibilidad y aprobación, pago aprobado/rechazado, daño grave, alcance de reportes. Los puertos se simulan | `mvn test` |
-| **Integración** (9) | App completa (Spring Security + JPA + MySQL) con MockMvc: JWT, rutas públicas y protegidas, validación y el flujo completo de alquiler | `mvn verify -Pintegracion` |
+| **Unitarias de dominio** (26) | `RangoFechas`, `Dinero`, ciclo de `Reserva`, entregas, devoluciones, daños, inventario y token de recuperación. Java puro, sin Spring | `mvn test` |
+| **Casos de uso con Mockito** (23) | Disponibilidad y aprobación, pago aprobado/rechazado, daño grave, alcance de reportes, recuperación de contraseña. Los puertos se simulan | `mvn test` |
+| **Integración** (13) | App completa (Spring Security + JPA + MySQL) con MockMvc: JWT, rutas públicas y protegidas, reglas de formato, recuperación de contraseña y el flujo completo de alquiler | `mvn verify -Pintegracion` |
 | **Script de punta a punta** | 42 verificaciones contra la API en ejecución, incluidos los casos que deben fallar | `docs/pruebas/flujo-completo.ps1` |
-| **Postman** | 48 peticiones (GET, POST, PUT, PATCH, DELETE) con scripts que validan el código y encadenan los datos | `docs/postman/` |
+| **Postman** | 51 peticiones (GET, POST, PUT, PATCH, DELETE) con scripts que validan el código y encadenan los datos | `docs/postman/` |
 
 ### Unitarias (no necesitan base de datos)
 

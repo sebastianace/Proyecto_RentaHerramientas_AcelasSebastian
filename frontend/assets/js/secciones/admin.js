@@ -12,14 +12,14 @@ import { seccionInventario } from './proveedor.js';
 // ---------- Usuarios ----------
 
 const CAMPOS_PROVEEDOR = `<div class="form-grid">
-  <label class="field full"><span>Razón social</span><input class="input" name="razonSocial" required></label>
-  <label class="field"><span>NIT</span><input class="input" name="nit" required placeholder="900123456-1"></label>
-  <label class="field"><span>Ciudad</span><input class="input" name="ciudad" required></label>
+  <label class="field full"><span>Razón social</span><input class="input" name="razonSocial" data-solo="empresa" required></label>
+  <label class="field"><span>NIT</span><input class="input" name="nit" data-solo="nit" required placeholder="900123456-1"></label>
+  <label class="field"><span>Ciudad</span><input class="input" name="ciudad" data-solo="letras" required></label>
   <label class="field full"><span>Dirección</span><input class="input" name="direccion" required></label>
-  <label class="field"><span>Nombres del contacto</span><input class="input" name="nombres" required></label>
-  <label class="field"><span>Apellidos del contacto</span><input class="input" name="apellidos" required></label>
+  <label class="field"><span>Nombres del contacto</span><input class="input" name="nombres" data-solo="letras" required></label>
+  <label class="field"><span>Apellidos del contacto</span><input class="input" name="apellidos" data-solo="letras" required></label>
   <label class="field"><span>Correo (usuario)</span><input class="input" type="email" name="email" required></label>
-  <label class="field"><span>Teléfono</span><input class="input" name="telefono"></label>
+  <label class="field"><span>Teléfono</span><input class="input" name="telefono" data-solo="telefono" inputmode="numeric" maxlength="10" placeholder="3001234567"></label>
   <label class="field full"><span>Contraseña inicial</span><input class="input" type="password" name="password" required minlength="8">
     <small class="hint">Mínimo 8 caracteres con letras y números. Compártela con el proveedor por un canal seguro.</small></label>
   <label class="field full"><span>Descripción</span><textarea class="textarea" name="descripcion"></textarea></label></div>`;
@@ -109,7 +109,7 @@ async function categorias(main) {
         <td><div class="actions"><button class="btn btn-ghost btn-sm" data-editar="${c.id}">${icono('edit')}Editar</button>
           ${c.activa ? `<button class="btn btn-danger btn-sm" data-desactivar="${c.id}">Desactivar</button>` : `<button class="btn btn-ok btn-sm" data-activar="${c.id}">Activar</button>`}</div></td></tr>`).join('')}</tbody></table>`;
   }
-  const campos = (c = {}) => `<label class="field"><span>Nombre</span><input class="input" name="nombre" required maxlength="80" value="${esc(c.nombre || '')}"></label>
+  const campos = (c = {}) => `<label class="field"><span>Nombre</span><input class="input" name="nombre" data-solo="categoria" required maxlength="80" value="${esc(c.nombre || '')}"></label>
     <label class="field"><span>Descripción</span><textarea class="textarea" name="descripcion" maxlength="255">${esc(c.descripcion || '')}</textarea></label>`;
 
   main.addEventListener('click', async (e) => {

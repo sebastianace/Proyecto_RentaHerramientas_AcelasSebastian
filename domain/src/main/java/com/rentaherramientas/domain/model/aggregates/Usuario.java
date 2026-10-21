@@ -19,7 +19,7 @@ public class Usuario {
 
     private final Long id;
     private final Email email;
-    private final String passwordHash;
+    private String passwordHash;
     private String nombres;
     private String apellidos;
     private String telefono;
@@ -63,6 +63,11 @@ public class Usuario {
     }
 
     /** Borrado lógico: el usuario conserva su historial pero ya no puede iniciar sesión. */
+    /** Cambia la contraseña (recibe el hash ya cifrado: el dominio nunca ve la clave en texto plano). */
+    public void cambiarPassword(String nuevoPasswordHash) {
+        this.passwordHash = ReglaDeNegocioException.requerido(nuevoPasswordHash, "password");
+    }
+
     public void desactivar() {
         this.activo = false;
     }

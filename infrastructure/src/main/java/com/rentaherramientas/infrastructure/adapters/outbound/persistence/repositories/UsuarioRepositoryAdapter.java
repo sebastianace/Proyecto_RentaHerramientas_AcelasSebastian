@@ -1,8 +1,10 @@
 package com.rentaherramientas.infrastructure.adapters.outbound.persistence.repositories;
 
+import com.rentaherramientas.domain.exceptions.RecursoNoEncontradoException;
 import com.rentaherramientas.domain.model.aggregates.Usuario;
 import com.rentaherramientas.domain.model.valueobject.Email;
 import com.rentaherramientas.domain.repositories.UsuarioRepository;
+import com.rentaherramientas.infrastructure.adapters.outbound.persistence.entities.UsuarioEntity;
 import com.rentaherramientas.infrastructure.adapters.outbound.persistence.mappers.IdentidadEntityMapper;
 import org.springframework.stereotype.Repository;
 
@@ -13,9 +15,11 @@ import java.util.Optional;
 public class UsuarioRepositoryAdapter implements UsuarioRepository {
 
     private final UsuarioJpaRepository jpa;
+    private final RolResolver rolResolver;
 
-    public UsuarioRepositoryAdapter(UsuarioJpaRepository jpa) {
+    public UsuarioRepositoryAdapter(UsuarioJpaRepository jpa, RolResolver rolResolver) {
         this.jpa = jpa;
+        this.rolResolver = rolResolver;
     }
 
     @Override
@@ -31,5 +35,14 @@ public class UsuarioRepositoryAdapter implements UsuarioRepository {
     @Override
     public boolean existePorEmail(Email email) {
         return jpa.existsByEmail(email.valor());
+    }
+
+    /** Carga la entidad existente y le copia los cambios (contraseña, datos personales, activo, roles). */
+    @Override
+    public Usuario guardar(Usuario usuario) {
+        UsuarioEntity entidad = jpa.findById(usuario.getId())
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario", usuario.getId()));
+        IdentidadEntityMapper.copiar(usuario, entidad, rolResolver::buscar);
+        return IdentidadEntityMapper.aDominio(jpa.saveAndFlush(entidad));
     }
 }

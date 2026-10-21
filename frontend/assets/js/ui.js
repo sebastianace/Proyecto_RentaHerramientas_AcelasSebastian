@@ -189,15 +189,78 @@ export function formularioModal({ titulo, campos, textoBoton = 'Guardar', ancho 
   return m;
 }
 
+// Algunos errores de la API vienen de una regla que combina campos (ej. el documento según su tipo):
+// se muestran debajo del campo que el usuario debe corregir.
+const CAMPO_DEL_ERROR = { numeroDocumentoValido: 'numeroDocumento' };
+
+/** Muestra el error de la API: el mensaje de cada campo debajo de su casilla y un resumen arriba del botón. */
 export function mostrarErrorEnFormulario(form, caja, error) {
+  $$('.field-error', form).forEach((e) => e.remove());
   if (error.errores) {
-    Object.keys(error.errores).forEach((campo) => form.elements[campo]?.setAttribute('aria-invalid', 'true'));
-    caja.innerHTML = `${icono('alertCircle')}<div><b>${esc(error.message)}</b><br>${Object.entries(error.errores)
-      .map(([c, m]) => `${esc(c)}: ${esc(m)}`).join('<br>')}</div>`;
+    const sinCampo = [];
+    Object.entries(error.errores).forEach(([clave, mensaje]) => {
+      const campo = form.elements[CAMPO_DEL_ERROR[clave] || clave];
+      if (campo?.setAttribute) {
+        campo.setAttribute('aria-invalid', 'true');
+        const aviso = Object.assign(document.createElement('small'), { className: 'field-error', textContent: mensaje });
+        (campo.closest('.field') || campo.parentElement).append(aviso);
+      } else {
+        sinCampo.push(mensaje);
+      }
+    });
+    caja.innerHTML = `${icono('alertCircle')}<div><b>Revisa los campos marcados en rojo.</b>${sinCampo.map((m) => `<br>${esc(m)}`).join('')}</div>`;
   } else {
     caja.innerHTML = `${icono('alertCircle')}<div>${esc(error.message)}</div>`;
   }
   caja.classList.remove('hidden');
+}
+
+// ---------- Filtros de escritura ----------
+// Impiden teclear caracteres que no corresponden (ej. números en un nombre). La API valida lo mismo:
+// el frontend ayuda al usuario, pero la regla de verdad está en el backend.
+const FILTROS = {
+  letras: (v) => v.replace(/[^\p{L} .'-]/gu, '').slice(0, 80),
+  numeros: (v) => v.replace(/\D/g, ''),
+  telefono: (v) => v.replace(/\D/g, '').slice(0, 10),
+  nit: (v) => v.replace(/[^\d-]/g, '').slice(0, 12),
+  categoria: (v) => v.replace(/[^\p{L} ,-]/gu, '').slice(0, 80),
+  empresa: (v) => v.replace(/[^\p{L}\d .,&'-]/gu, '').slice(0, 150),
+};
+
+function filtroDocumento(form) {
+  const tipo = form?.elements?.tipoDocumento?.value;
+  if (tipo === 'PASAPORTE') return (v) => v.replace(/[^A-Za-z0-9]/g, '').toUpperCase().slice(0, 12);
+  if (tipo === 'NIT') return FILTROS.nit;
+  return (v) => v.replace(/\D/g, '').slice(0, 10); // CC y CE: solo números
+}
+
+function aplicarFiltro(campo) {
+  const tipo = campo.dataset?.solo;
+  if (!tipo) return;
+  const filtro = tipo === 'documento' ? filtroDocumento(campo.form) : FILTROS[tipo];
+  if (!filtro) return;
+  const limpio = filtro(campo.value);
+  if (limpio !== campo.value) {
+    campo.value = limpio;
+    campo.classList.add('rechazo');
+    setTimeout(() => campo.classList.remove('rechazo'), 400);
+  }
+  campo.removeAttribute('aria-invalid');
+  campo.closest('.field')?.querySelector('.field-error')?.remove();
+}
+
+let filtrosActivos = false;
+/** Se activa una sola vez por página y funciona también en los modales (delegación de eventos). */
+export function activarFiltros() {
+  if (filtrosActivos) return;
+  filtrosActivos = true;
+  document.addEventListener('input', (e) => aplicarFiltro(e.target));
+  document.addEventListener('change', (e) => {
+    if (e.target.name === 'tipoDocumento') {
+      const doc = e.target.form?.elements?.numeroDocumento;
+      if (doc) aplicarFiltro(doc);
+    }
+  });
 }
 
 export function cargando(boton, activo, texto = null) {
@@ -264,6 +327,7 @@ document.documentElement.dataset.theme = temaInicial();
 
 export function montarLayout({ activa = '', sinPie = false } = {}) {
   montarIconos();
+  activarFiltros();
   const rol = sesion.rol();
   const encabezado = document.createElement('div');
   encabezado.innerHTML = `

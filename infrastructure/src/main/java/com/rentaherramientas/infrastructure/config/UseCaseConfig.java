@@ -1,5 +1,6 @@
 package com.rentaherramientas.infrastructure.config;
 
+import com.rentaherramientas.application.config.PoliticaRecuperacion;
 import com.rentaherramientas.application.config.PoliticaReservas;
 import com.rentaherramientas.application.ports.in.AutenticacionUseCase;
 import com.rentaherramientas.application.ports.in.GestionCategoriasUseCase;
@@ -9,6 +10,10 @@ import com.rentaherramientas.application.ports.in.GestionHerramientasUseCase;
 import com.rentaherramientas.application.ports.in.GestionPagosUseCase;
 import com.rentaherramientas.application.ports.in.GestionProveedoresUseCase;
 import com.rentaherramientas.application.ports.in.GestionReservasUseCase;
+import com.rentaherramientas.application.ports.in.RecuperacionPasswordUseCase;
+import com.rentaherramientas.application.ports.out.EnvioCorreoPort;
+import com.rentaherramientas.application.usecases.RecuperacionPasswordService;
+import com.rentaherramientas.domain.repositories.TokenRecuperacionRepository;
 import com.rentaherramientas.application.ports.in.ReportesUseCase;
 import com.rentaherramientas.application.ports.out.ConsultaReportesPort;
 import com.rentaherramientas.application.usecases.ReportesService;
@@ -65,7 +70,7 @@ import java.time.Clock;
  * el resto, transacciones de lectura y escritura.</p>
  */
 @Configuration
-@EnableConfigurationProperties(ReservasProperties.class)
+@EnableConfigurationProperties({ReservasProperties.class, RecuperacionProperties.class})
 public class UseCaseConfig {
 
     private final TransactionInterceptor transacciones;
@@ -170,6 +175,17 @@ public class UseCaseConfig {
     public ReportesUseCase reportesUseCase(ConsultaReportesPort consultaReportes,
                                            ProveedorRepository proveedorRepository, Clock reloj) {
         return transaccional(new ReportesService(consultaReportes, proveedorRepository, reloj), ReportesUseCase.class);
+    }
+
+    @Bean
+    public RecuperacionPasswordUseCase recuperacionPasswordUseCase(UsuarioRepository usuarioRepository,
+                                                                   TokenRecuperacionRepository tokenRepository,
+                                                                   PasswordEncoderPort passwordEncoder,
+                                                                   EnvioCorreoPort correo,
+                                                                   RecuperacionProperties propiedades, Clock reloj) {
+        PoliticaRecuperacion politica = new PoliticaRecuperacion(propiedades.vigencia(), propiedades.urlRestablecer());
+        return transaccional(new RecuperacionPasswordService(usuarioRepository, tokenRepository, passwordEncoder,
+                correo, politica, reloj), RecuperacionPasswordUseCase.class);
     }
 
     /** Envuelve el caso de uso en un proxy que abre y cierra la transacción en cada llamada. */
