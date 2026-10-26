@@ -4,6 +4,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.temporal.ChronoUnit;
+
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.hasItem;
@@ -50,6 +54,19 @@ class NuevasFuncionalidadesIntegracionTest extends IntegracionBase {
     void clienteNoPuedeBuscar() throws Exception {
         mvc.perform(get("/api/v1/clientes?texto=ardila").header("Authorization", bearer(token(CLIENTE))))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("Multa por devolución tardía: la reserva 21 terminó el 17/oct; cada día de retraso cuesta $450.000")
+    void devolucionTardiaConMulta() throws Exception {
+        // Reserva sembrada ENTREGADA: valor diario 160.000 + 140.000 = 300.000, al 150 % = 450.000 por día de retraso
+        long diasRetraso = ChronoUnit.DAYS.between(LocalDate.of(2026, 10, 17), LocalDate.now(ZoneId.of("America/Bogota")));
+
+        mvc.perform(post("/api/v1/reservas/21/devolucion").header("Authorization", bearer(token(ADMIN)))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"estadoEquipo\":\"BUENO\"}"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.diasRetraso").value((int) diasRetraso))
+                .andExpect(jsonPath("$.multa").value(450000.0 * diasRetraso));
     }
 
     @Test
