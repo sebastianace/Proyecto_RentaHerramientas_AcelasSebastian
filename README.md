@@ -42,6 +42,7 @@
 | Pruebas | JUnit 5, AssertJ, Mockito, MockMvc | gestionado por Spring Boot |
 | Frontend | HTML, CSS y JavaScript puro (módulos ES) | — |
 | Build | Maven (multimódulo) | 3.9+ |
+| Contenedores | Docker + Docker Compose | Compose v2 |
 
 ---
 
@@ -81,6 +82,8 @@ Proyecto_RentaHerramientas_AcelasSebastian
 │   ├── postman/                    # Colección de Postman
 │   └── pruebas/                    # Script de PowerShell que recorre el flujo completo
 ├── frontend/                       # Tienda y paneles en HTML, CSS y JavaScript puro
+├── docker/                         # Dockerfiles del backend (2 etapas) y del frontend (nginx)
+├── docker-compose.yml              # Levanta MySQL + backend + frontend con un comando
 ├── domain/                         # Núcleo del negocio (Java puro)
 │   └── src/main/java/com/rentaherramientas/domain
 │       ├── model
@@ -264,6 +267,88 @@ Notas para Linux:
   minúsculas, así que no hay que configurar nada.
 - `sudo mysql` entra como root con el usuario del sistema (instalación por defecto de Ubuntu). Si tu root tiene
   contraseña, usa `mysql -u root -p < database/00_create_database_and_user.sql`.
+
+---
+
+### 8. Ejecutar con Docker (recomendado en Ubuntu)
+
+Con **Docker Compose** se levantan la base de datos (MySQL 8), el backend (Spring Boot) y el frontend (nginx) con **un solo
+comando**, sin instalar Java, Maven ni MySQL. Es la forma más rápida de correr el proyecto en los computadores de
+Campuslands (Ubuntu).
+
+```
+ navegador ──► frontend (nginx, :5500) ──┐
+     │                                   │ (el navegador llama a la API)
+     └──────► backend (Spring Boot, :8080) ──► db (MySQL 8.0, red interna)
+```
+
+**Pasos (en la carpeta del proyecto):**
+
+```bash
+# 1. Comprobar que Docker funciona
+docker --version
+docker compose version
+docker info | grep "Server Version"
+
+# 2. Clonar el proyecto (si aún no lo tienes) y entrar
+git clone https://github.com/sebastianace/Proyecto_RentaHerramientas_AcelasSebastian.git
+cd Proyecto_RentaHerramientas_AcelasSebastian
+
+# 3. Crear el .env con DOS valores: DB_PASSWORD y JWT_SECRET
+cp .env.example .env
+openssl rand -base64 48        # copia el resultado en JWT_SECRET
+nano .env                      # pon una clave en DB_PASSWORD y pega el JWT_SECRET (guardar: Ctrl+O, Enter, Ctrl+X)
+
+# 4. Validar la configuración y levantar todo
+docker compose config -q && echo "configuración válida"
+docker compose up -d --build   # la primera vez tarda varios minutos (descarga y compila)
+
+# 5. Comprobar que los 3 servicios funcionan
+docker compose ps              # db "healthy"; backend y frontend "running"
+docker compose logs --tail 30 backend    # busca: "Started RentaHerramientasApplication"
+curl -s http://localhost:8080/api/v1/categorias | head -c 200
+```
+
+| Qué | Dirección |
+|---|---|
+| Tienda ObraYa | http://localhost:5500 |
+| Swagger | http://localhost:8080/swagger-ui.html |
+
+Usuarios de prueba (clave `Renta2026*`): `juanpablo.ardila@gmail.com` (cliente), `carlos.rueda@herroriente.com`
+(proveedor) y `admin@rentaherramientas.com` (administrador).
+
+**Variables del `.env` para Docker:** `DB_PASSWORD` y `JWT_SECRET` son obligatorias; `BACKEND_PORT` (puerto del backend en
+el computador, por defecto 8080) y `DB_ROOT_PASSWORD` son opcionales. El `.env` nunca entra a una imagen
+(está en `.dockerignore`).
+
+**Comandos del día a día:**
+
+| Comando | Qué hace |
+|---|---|
+| `docker compose up -d --build` | Levanta todo en segundo plano |
+| `docker compose ps` | Estado de los 3 servicios |
+| `docker compose logs -f backend` | Sigue los logs del backend (aquí aparece el correo simulado de recuperar contraseña) |
+| `docker compose up -d --build backend` | Reconstruye solo el backend tras cambiar código |
+| `docker compose restart backend` | Reinicia el backend |
+| `docker compose down` | Apaga todo y **conserva** la base de datos y las imágenes subidas |
+| `docker compose down -v` | Apaga todo y **borra** también la base de datos y las imágenes subidas |
+
+**Problemas frecuentes en el computador del campus (Ubuntu, sin `sudo`):**
+
+| Síntoma | Causa y solución |
+|---|---|
+| `Cannot connect to the Docker daemon at unix:///home/camper/.docker/desktop/docker.sock` | Docker Desktop está apagado: `systemctl --user start docker-desktop`, espera ~1 minuto y verifica con `docker info \| grep "Server Version"` |
+| `permission denied ... /var/run/docker.sock` | El contexto apunta al motor del sistema: `docker context use desktop-linux` |
+| `sudo: I'm sorry camper` | En esa máquina no hay `sudo`: usa Docker Desktop (no el motor del sistema) |
+| `address already in use` / `port is already allocated` en el 8080 | Agrega `BACKEND_PORT=8081` al `.env`, levanta de nuevo y abre `http://localhost:5500/?api=http://localhost:8081` (Swagger: `http://localhost:8081/swagger-ui.html`) |
+| `Access denied for user 'renta_app'` | El volumen de MySQL se creó con otra clave: `docker compose down -v` y levanta de nuevo |
+| `exit code 137` o el build se corta | Falta memoria: en Docker Desktop (Settings → Resources) sube a 4 GB o más |
+| `the --mount option requires BuildKit` | `DOCKER_BUILDKIT=1 docker compose up --build` |
+| `Falta DB_PASSWORD en el archivo .env` | Crea el `.env` (`cp .env.example .env`) y completa `DB_PASSWORD` y `JWT_SECRET` |
+| La tienda carga pero sin datos | El backend aún arranca (~30 s) o el navegador guardó otra API: abre `http://localhost:5500/?api=http://localhost:8080` |
+
+Los archivos están en `docker-compose.yml` y `docker/` (`backend.Dockerfile` en dos etapas: Maven + JDK 21 compilan y la
+imagen final solo lleva el JRE 21; `frontend.Dockerfile` con nginx). Explicación completa en [`docs/docker.md`](docs/docker.md).
 
 ---
 
