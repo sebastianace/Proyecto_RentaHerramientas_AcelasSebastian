@@ -7,7 +7,7 @@ import { icono } from '../iconos.js';
 import {
   $, esc, cop, visual, formularioModal, modal, confirmar, toast, toastError, vacio,
 } from '../ui.js';
-import { encabezado, listaReservas, seccionPagos, seccionFacturas, refrescar } from './comunes.js';
+import { encabezado, listaReservas, seccionPagos, seccionFacturas, refrescar, modalCambiarPassword } from './comunes.js';
 import { tablero } from './tablero.js';
 import { seccionDevoluciones, seccionIncidencias } from './devoluciones.js';
 
@@ -155,13 +155,15 @@ async function perfil(main) {
   const id = sesion.perfil()?.proveedorId;
   const p = await get(`/proveedores/${id}`);
   main.innerHTML = `${encabezado('Mi empresa', 'Estos datos aparecen en tus facturas como emisor.',
-    `<button class="btn btn-primary" data-editar>${icono('edit')}Editar datos</button>`)}
+    `<button class="btn btn-ghost" data-password>${icono('shield')}Cambiar contraseña</button>
+    <button class="btn btn-primary" data-editar>${icono('edit')}Editar datos</button>`)}
     <div class="box"><dl class="specs">
       <div><dt>Razón social</dt><dd>${esc(p.razonSocial)}</dd></div><div><dt>NIT</dt><dd>${esc(p.nit)}</dd></div>
       <div><dt>Contacto</dt><dd>${esc(p.usuario.nombres)} ${esc(p.usuario.apellidos)}</dd></div><div><dt>Correo</dt><dd>${esc(p.usuario.email)}</dd></div>
       <div><dt>Teléfono</dt><dd>${esc(p.usuario.telefono || '—')}</dd></div><div><dt>Ciudad</dt><dd>${esc(p.ciudad)}</dd></div>
       <div><dt>Dirección</dt><dd>${esc(p.direccion)}</dd></div><div><dt>Descripción</dt><dd>${esc(p.descripcion || '—')}</dd></div>
     </dl></div>`;
+  $('[data-password]', main).addEventListener('click', modalCambiarPassword);
   $('[data-editar]', main).addEventListener('click', () => formularioModal({
     titulo: 'Editar datos de la empresa', ancho: true,
     campos: `<div class="form-grid">

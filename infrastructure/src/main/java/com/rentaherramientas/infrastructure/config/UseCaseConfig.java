@@ -112,9 +112,11 @@ public class UseCaseConfig {
                                                      UsuarioRepository usuarioRepository,
                                                      ClienteRepository clienteRepository,
                                                      ProveedorRepository proveedorRepository,
-                                                     GestionClientesUseCase gestionClientes) {
+                                                     GestionClientesUseCase gestionClientes,
+                                                     PasswordEncoderPort passwordEncoder) {
         return transaccional(new AutenticacionService(autenticador, tokenProvider, usuarioRepository,
-                clienteRepository, proveedorRepository, gestionClientes), AutenticacionUseCase.class);
+                clienteRepository, proveedorRepository, gestionClientes, passwordEncoder),
+                AutenticacionUseCase.class);
     }
 
     @Bean

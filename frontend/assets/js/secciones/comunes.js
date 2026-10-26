@@ -339,6 +339,26 @@ export function modalDevolucion(r) {
   });
 }
 
+// ---------- Cambiar contraseña (todos los roles) ----------
+
+export function modalCambiarPassword() {
+  formularioModal({
+    titulo: 'Cambiar mi contraseña', textoBoton: 'Cambiar contraseña',
+    campos: `
+      <label class="field"><span>Contraseña actual</span><input class="input" type="password" name="passwordActual" autocomplete="current-password" required></label>
+      <label class="field"><span>Contraseña nueva</span><input class="input" type="password" name="passwordNueva" autocomplete="new-password" minlength="8" required>
+        <small class="hint">Mínimo 8 caracteres, con al menos una letra y un número.</small></label>
+      <label class="field"><span>Repite la contraseña nueva</span><input class="input" type="password" name="confirmacion" autocomplete="new-password" required></label>`,
+    enviar: async (d) => {
+      if (d.passwordNueva !== d.confirmacion) {
+        throw Object.assign(new Error('Las contraseñas nuevas no coinciden'), { errores: { confirmacion: 'Las contraseñas no coinciden' } });
+      }
+      await post('/auth/cambiar-password', { passwordActual: d.passwordActual, passwordNueva: d.passwordNueva });
+      toast('Tu contraseña se actualizó correctamente', 'ok');
+    },
+  });
+}
+
 // ---------- Pagos y facturas ----------
 
 export async function seccionPagos(main, subtitulo) {

@@ -11,8 +11,10 @@ import com.rentaherramientas.application.mappers.IdentidadMapper;
 import com.rentaherramientas.application.ports.in.AutenticacionUseCase;
 import com.rentaherramientas.application.ports.in.GestionClientesUseCase;
 import com.rentaherramientas.application.ports.out.AutenticadorPort;
+import com.rentaherramientas.application.ports.out.PasswordEncoderPort;
 import com.rentaherramientas.application.ports.out.TokenProviderPort;
 import com.rentaherramientas.domain.exceptions.RecursoNoEncontradoException;
+import com.rentaherramientas.domain.exceptions.ReglaDeNegocioException;
 import com.rentaherramientas.domain.model.aggregates.Cliente;
 import com.rentaherramientas.domain.model.aggregates.Proveedor;
 import com.rentaherramientas.domain.model.aggregates.Usuario;
@@ -37,16 +39,19 @@ public class AutenticacionService implements AutenticacionUseCase {
     private final ClienteRepository clienteRepository;
     private final ProveedorRepository proveedorRepository;
     private final GestionClientesUseCase gestionClientes;
+    private final PasswordEncoderPort passwordEncoder;
 
     public AutenticacionService(AutenticadorPort autenticador, TokenProviderPort tokenProvider,
                                 UsuarioRepository usuarioRepository, ClienteRepository clienteRepository,
-                                ProveedorRepository proveedorRepository, GestionClientesUseCase gestionClientes) {
+                                ProveedorRepository proveedorRepository, GestionClientesUseCase gestionClientes,
+                                PasswordEncoderPort passwordEncoder) {
         this.autenticador = autenticador;
         this.tokenProvider = tokenProvider;
         this.usuarioRepository = usuarioRepository;
         this.clienteRepository = clienteRepository;
         this.proveedorRepository = proveedorRepository;
         this.gestionClientes = gestionClientes;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -73,6 +78,23 @@ public class AutenticacionService implements AutenticacionUseCase {
         Long clienteId = clienteRepository.buscarPorUsuarioId(usuarioId).map(Cliente::getId).orElse(null);
         Long proveedorId = proveedorRepository.buscarPorUsuarioId(usuarioId).map(Proveedor::getId).orElse(null);
         return new PerfilResult(IdentidadMapper.aResult(usuario), clienteId, proveedorId);
+    }
+
+    @Override
+    public void cambiarPassword(Long usuarioId, String passwordActual, String passwordNueva) {
+        Usuario usuario = usuarioRepository.buscarPorId(usuarioId)
+                .orElseThrow(() -> new RecursoNoEncontradoException("Usuario", usuarioId));
+        if (passwordActual != null && passwordActual.equals(passwordNueva)) {
+            throw new ReglaDeNegocioException("La contraseña nueva debe ser distinta de la actual");
+        }
+        try {
+            autenticador.autenticar(usuario.getEmail().valor(), passwordActual);
+        } catch (CredencialesInvalidasException e) {
+            // 422 y no 401: un 401 con token significa "sesión vencida" y el frontend cerraría la sesión
+            throw new ReglaDeNegocioException("La contraseña actual no es correcta");
+        }
+        usuario.cambiarPassword(passwordEncoder.cifrar(passwordNueva));
+        usuarioRepository.guardar(usuario);
     }
 
     private AutenticacionResult emitirToken(Usuario usuario) {
