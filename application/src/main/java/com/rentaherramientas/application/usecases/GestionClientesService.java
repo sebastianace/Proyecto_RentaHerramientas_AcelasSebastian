@@ -61,8 +61,14 @@ public class GestionClientesService implements GestionClientesUseCase {
     }
 
     @Override
-    public Pagina<ClienteResult> listar(SolicitudPagina solicitud) {
-        return clienteRepository.listar(solicitud).map(IdentidadMapper::aResult);
+    public Pagina<ClienteResult> listar(String texto, String ciudad, SolicitudPagina solicitud) {
+        // Los textos vacíos se tratan como "sin filtro" y se recortan los espacios sobrantes
+        return clienteRepository.listar(normalizar(texto), normalizar(ciudad), solicitud)
+                .map(IdentidadMapper::aResult);
+    }
+
+    private static String normalizar(String valor) {
+        return valor == null || valor.isBlank() ? null : valor.trim();
     }
 
     @Override

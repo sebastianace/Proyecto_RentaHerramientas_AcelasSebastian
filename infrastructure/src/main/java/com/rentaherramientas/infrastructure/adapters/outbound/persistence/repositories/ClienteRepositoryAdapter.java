@@ -57,7 +57,8 @@ public class ClienteRepositoryAdapter implements ClienteRepository {
     }
 
     @Override
-    public Pagina<Cliente> listar(SolicitudPagina solicitud) {
-        return PaginaMapper.aPagina(jpa.findAll(PaginaMapper.aPageRequest(solicitud)), IdentidadEntityMapper::aDominio);
+    public Pagina<Cliente> listar(String texto, String ciudad, SolicitudPagina solicitud) {
+        return PaginaMapper.aPagina(jpa.buscar(texto, ciudad, PaginaMapper.aPageRequest(solicitud)),
+                IdentidadEntityMapper::aDominio);
     }
 }

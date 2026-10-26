@@ -3,7 +3,7 @@
 
 import { get, post, put, patch, del, query } from '../api.js';
 import { icono } from '../iconos.js';
-import { $, $$, esc, badge, formularioModal, confirmar, toast, toastError, paginador, vacio, cargando } from '../ui.js';
+import { $, $$, esc, badge, debounce, formularioModal, confirmar, toast, toastError, paginador, vacio, cargando } from '../ui.js';
 import { encabezado, listaReservas, seccionPagos, seccionFacturas } from './comunes.js';
 import { tablero } from './tablero.js';
 import { seccionDevoluciones, seccionIncidencias } from './devoluciones.js';
@@ -27,15 +27,22 @@ const CAMPOS_PROVEEDOR = `<div class="form-grid">
 async function usuarios(main) {
   let tipo = 'clientes';
   let pagina = 0;
+  let texto = '';
   main.innerHTML = `${encabezado('Usuarios', 'Clientes y proveedores de la plataforma. Desactivar un usuario le impide iniciar sesión (borrado lógico).',
     `<button class="btn btn-primary" data-nuevo-proveedor>${icono('plus')}Nuevo proveedor</button>`)}
     <div class="tabs" style="max-width:360px;margin-bottom:1rem" role="tablist">
       <button role="tab" aria-selected="true" data-tipo="clientes">Clientes</button>
       <button role="tab" aria-selected="false" data-tipo="proveedores">Proveedores</button></div>
+    <label class="field" style="max-width:420px;margin-bottom:1rem" data-busqueda>
+      <span>Buscar cliente</span>
+      <input class="input" type="search" data-buscar maxlength="80" placeholder="Nombre, apellido, correo o documento…" autocomplete="off">
+    </label>
     <div class="table-wrap" data-tabla></div><nav class="pager" data-pager></nav>`;
 
   async function cargar() {
-    const r = await get(`/${tipo}${query({ pagina, tamanio: 15 })}`);
+    // La búsqueda por texto solo existe para clientes (el backend la aplica en GET /clientes?texto=)
+    $('[data-busqueda]', main).classList.toggle('hidden', tipo !== 'clientes');
+    const r = await get(`/${tipo}${query({ pagina, tamanio: 15, texto: tipo === 'clientes' ? texto : '' })}`);
     const esCliente = tipo === 'clientes';
     $('[data-tabla]', main).innerHTML = r.contenido.length ? `<table>
       <thead><tr><th>${esCliente ? 'Cliente' : 'Empresa'}</th><th>${esCliente ? 'Documento' : 'NIT'}</th><th>Contacto</th><th>Ciudad</th><th>Estado</th><th></th></tr></thead>
@@ -48,9 +55,15 @@ async function usuarios(main) {
         <td><div class="actions">${x.usuario.activo
           ? `<button class="btn btn-danger btn-sm" data-desactivar="${x.id}" data-nombre="${esc(esCliente ? x.usuario.nombres : x.razonSocial)}">Desactivar</button>`
           : `<button class="btn btn-ok btn-sm" data-activar="${x.id}">Activar</button>`}</div></td></tr>`).join('')}</tbody></table>`
-      : vacio('Sin usuarios', '');
+      : vacio(texto ? 'Sin resultados' : 'Sin usuarios', texto ? `Ningún cliente coincide con “${texto}”.` : '');
     paginador($('[data-pager]', main), r.pagina, r.totalPaginas, (p) => { pagina = p; cargar(); });
   }
+
+  $('[data-buscar]', main).addEventListener('input', debounce((e) => {
+    texto = e.target.value.trim();
+    pagina = 0;
+    cargar();
+  }, 350));
 
   main.addEventListener('click', async (e) => {
     const t = e.target.closest('[data-tipo]');

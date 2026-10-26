@@ -8,10 +8,12 @@ import com.rentaherramientas.infrastructure.adapters.inbound.dtos.ActualizarClie
 import com.rentaherramientas.infrastructure.adapters.inbound.dtos.RegistroClienteRequest;
 import com.rentaherramientas.infrastructure.security.UsuarioAutenticado;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -43,10 +45,17 @@ public class ClienteController {
 
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "Listar clientes (paginado)")
-    public Pagina<ClienteResult> listar(@RequestParam(defaultValue = "0") @Min(0) int pagina,
+    @Operation(summary = "Listar y buscar clientes (paginado)",
+            description = "Sin filtros devuelve todos. Con `texto` busca en nombres, apellidos, correo y número de documento; "
+                    + "con `ciudad` filtra por ciudad. Los filtros se pueden combinar")
+    public Pagina<ClienteResult> listar(
+            @Parameter(description = "Parte del nombre, apellido, correo o documento", example = "ardila")
+            @RequestParam(required = false) @Size(max = 80) String texto,
+            @Parameter(description = "Ciudad exacta", example = "Bucaramanga")
+            @RequestParam(required = false) @Size(max = 80) String ciudad,
+            @RequestParam(defaultValue = "0") @Min(0) int pagina,
                                         @RequestParam(defaultValue = "20") @Min(1) @Max(100) int tamanio) {
-        return gestionClientes.listar(new SolicitudPagina(pagina, tamanio));
+        return gestionClientes.listar(texto, ciudad, new SolicitudPagina(pagina, tamanio));
     }
 
     @GetMapping("/{id}")
