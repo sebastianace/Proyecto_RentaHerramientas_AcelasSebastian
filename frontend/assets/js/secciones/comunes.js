@@ -104,7 +104,7 @@ async function cargarLogistica(r, caja) {
   if (r.estado === 'DEVUELTA') {
     try {
       const d = await get(`/reservas/${r.id}/devolucion`);
-      partes.push(`<div class="notice ${d.estadoEquipo === 'CON_DANOS' ? 'warn' : 'ok'}">${icono('undo')}<div><b>Devuelta</b> el ${fechaHora(d.fechaDevolucion)} · ${badge(d.estadoEquipo)} ${d.validada ? badge('APROBADO', 'Validada por el admin') : badge('PENDIENTE', 'Por validar')}
+      partes.push(`<div class="notice ${d.estadoEquipo === 'CON_DANOS' ? 'warn' : 'ok'}">${icono('undo')}<div><b>Devuelta</b> el ${fechaHora(d.fechaDevolucion)} · ${badge(d.estadoEquipo)}${d.diasRetraso > 0 ? ` <span class="badge bad">Tardía: ${d.diasRetraso} día(s) · multa ${cop(d.multa)}</span>` : ''} ${d.validada ? badge('APROBADO', 'Validada por el admin') : badge('PENDIENTE', 'Por validar')}
         ${d.danos.map((x) => `<div style="margin-top:.35rem">${badge(x.severidad)} ${esc(x.herramienta)}: ${esc(x.descripcion)} · ${cop(x.costoEstimado)} · ${badge(x.estado)}</div>`).join('')}</div></div>`);
     } catch { /* sin devolución registrada */ }
   }
@@ -327,9 +327,10 @@ export function modalDevolucion(r) {
     });
     cargando(boton, true);
     try {
-      await post(`/reservas/${r.id}/devolucion`, { estadoEquipo: form.estadoEquipo.value, observaciones: form.observaciones.value, danos });
+      const dev = await post(`/reservas/${r.id}/devolucion`, { estadoEquipo: form.estadoEquipo.value, observaciones: form.observaciones.value, danos });
       m.cerrar();
-      toast(`Devolución de ${r.codigo} confirmada${danos.length ? ` con ${danos.length} daño(s) reportado(s)` : ''}`, 'ok');
+      const multa = dev.diasRetraso > 0 ? `. Devolución tardía: ${dev.diasRetraso} día(s) de retraso, multa ${cop(dev.multa)}` : '';
+      toast(`Devolución de ${r.codigo} confirmada${danos.length ? ` con ${danos.length} daño(s) reportado(s)` : ''}${multa}`, dev.diasRetraso > 0 ? 'info' : 'ok');
       refrescar();
     } catch (error) {
       mostrarErrorEnFormulario(form, $('[data-error]', m.el), error);

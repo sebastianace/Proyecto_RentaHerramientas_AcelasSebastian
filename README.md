@@ -541,6 +541,8 @@ La documentación completa, con ejemplos y la opción de probar cada endpoint, e
 | POST | `/api/v1/auth/login` | Público | Iniciar sesión |
 | POST | `/api/v1/auth/registro` | Público | Registrarse como cliente |
 | GET | `/api/v1/auth/me` | Autenticado | Perfil del usuario autenticado |
+| POST | `/api/v1/auth/cambiar-password` | Autenticado | Cambiar mi contraseña (exige la actual; la nueva debe ser distinta) |
+| POST | `/api/v1/auth/cambiar-password` | Autenticado | Cambiar mi contraseña (exige la actual; la nueva debe ser distinta) |
 | POST | `/api/v1/auth/recuperar` | Público | Olvidé mi contraseña: envía un enlace (responde igual exista o no el correo) |
 | POST | `/api/v1/auth/restablecer` | Público | Crea la contraseña nueva con el token del enlace |
 
@@ -602,7 +604,7 @@ POST /api/v1/auth/login
 
 | Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| GET | `/api/v1/clientes?pagina=0&tamanio=20` | ADMIN | Listar clientes |
+| GET | `/api/v1/clientes?texto=ardila&ciudad=Bucaramanga&pagina=0&tamanio=20` | ADMIN | Listar y buscar clientes: `texto` busca en nombres, apellidos, correo y documento; `ciudad` filtra por ciudad (ambos opcionales y combinables) |
 | GET | `/api/v1/clientes/{id}` | ADMIN, CLIENTE (propio) | Obtener un cliente |
 | POST | `/api/v1/clientes` | ADMIN | Registrar un cliente |
 | PUT | `/api/v1/clientes/{id}` | ADMIN, CLIENTE (propio) | Actualizar un cliente |
@@ -818,6 +820,11 @@ POST /api/v1/reservas/36/devolucion
   ]
 }
 ```
+
+**Multa por devolución tardía.** Si el equipo se devuelve después de la `fecha_fin` de la reserva, la devolución registra
+los **días de retraso** y la **multa**: `valor diario del alquiler × 150 % × días de retraso`. El valor diario es la suma de
+`precio × cantidad` de cada herramienta (sin IVA) con el **precio congelado** de la reserva; devolver a tiempo o antes no
+genera multa. La calcula `Reserva.calcularMulta()` (dominio) y se guarda en la migración V11.
 
 **Reglas:**
 - Una entrega a `DOMICILIO` exige dirección; en `RECOGIDA_EN_SEDE` la dirección se descarta.

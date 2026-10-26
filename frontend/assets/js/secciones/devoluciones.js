@@ -30,7 +30,7 @@ export async function seccionDevoluciones(main) {
       <tbody>${devoluciones.map((x) => `<tr>
         <td class="mono cell-main">${esc(x.reserva.codigo)}</td><td>${esc(x.reserva.cliente)}</td>${esAdmin ? `<td class="small">${esc(x.reserva.proveedor)}</td>` : ''}
         <td>${fechaHora(x.fechaDevolucion)}<div class="cell-sub">por ${esc(x.recibidaPor)}</div></td>
-        <td>${badge(x.estadoEquipo)}</td>
+        <td>${badge(x.estadoEquipo)}${x.diasRetraso > 0 ? `<div class="cell-sub" style="color:var(--bad)">Tardía: ${x.diasRetraso} día(s) · multa ${cop(x.multa)}</div>` : ''}</td>
         <td>${x.danos.length ? x.danos.map((dn) => `<div class="small">${badge(dn.severidad)} ${esc(dn.herramienta)} · ${cop(dn.costoEstimado)}</div>`).join('') : '<span class="muted">—</span>'}</td>
         <td>${x.validada ? `${badge('APROBADO', 'Validada')}<div class="cell-sub">${esc(x.validadaPor)} · ${fechaHora(x.fechaValidacion)}</div>` : badge('PENDIENTE', 'Por validar')}</td>
         <td><div class="actions">
