@@ -4,7 +4,7 @@ import { get, put } from '../api.js';
 import { sesion } from '../sesion.js';
 import { icono, ilustracion } from '../iconos.js';
 import { $, esc, cop, fecha, badge, formularioModal, toast } from '../ui.js';
-import { encabezado, kpi, plazo, listaReservas, seccionPagos, seccionFacturas, refrescar } from './comunes.js';
+import { encabezado, kpi, plazo, listaReservas, seccionPagos, seccionFacturas, refrescar, modalCambiarPassword } from './comunes.js';
 
 async function inicio(main) {
   const r = await get('/reservas?tamanio=100');
@@ -56,7 +56,8 @@ async function perfil(main) {
   const id = sesion.perfil()?.clienteId;
   const c = await get(`/clientes/${id}`);
   main.innerHTML = `${encabezado('Mi perfil', 'Tus datos de contacto y de facturación.',
-    `<button class="btn btn-primary" data-editar>${icono('edit')}Editar datos</button>`)}
+    `<button class="btn btn-ghost" data-password>${icono('shield')}Cambiar contraseña</button>
+    <button class="btn btn-primary" data-editar>${icono('edit')}Editar datos</button>`)}
     <div class="box"><dl class="specs">
       <div><dt>Nombre</dt><dd>${esc(c.usuario.nombres)} ${esc(c.usuario.apellidos)}</dd></div>
       <div><dt>Correo</dt><dd>${esc(c.usuario.email)}</dd></div>
@@ -65,6 +66,7 @@ async function perfil(main) {
       <div><dt>Dirección</dt><dd>${esc(c.direccion)}</dd></div>
       <div><dt>Ciudad</dt><dd>${esc(c.ciudad)}</dd></div>
     </dl></div>`;
+  $('[data-password]', main).addEventListener('click', modalCambiarPassword);
   $('[data-editar]', main).addEventListener('click', () => formularioModal({
     titulo: 'Editar mis datos',
     campos: `<div class="form-grid">

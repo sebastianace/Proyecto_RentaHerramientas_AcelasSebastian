@@ -34,7 +34,7 @@ class DevolucionesYDanosTest {
     @Test
     @DisplayName("Una devolución solo se valida una vez")
     void validarUnaVez() {
-        Devolucion d = Devolucion.reconstruir(1L, 1L, AHORA, EstadoEquipo.BUENO, null, 3L, false, null, null);
+        Devolucion d = Devolucion.reconstruir(1L, 1L, AHORA, EstadoEquipo.BUENO, null, 3L, 0, Dinero.CERO, false, null, null);
         d.validar(1L, AHORA);
         assertThat(d.isValidada()).isTrue();
         assertThatThrownBy(() -> d.validar(1L, AHORA)).hasMessageContaining("ya fue validada");
@@ -44,8 +44,8 @@ class DevolucionesYDanosTest {
     @DisplayName("No se reportan daños de un equipo devuelto en BUEN estado ni de herramientas ajenas a la reserva")
     void reglasDelReporte() {
         Reserva r = ReservaTest.guardada(EstadoReserva.DEVUELTA); // contiene la herramienta 1
-        Devolucion buena = Devolucion.reconstruir(1L, 1L, AHORA, EstadoEquipo.BUENO, null, 3L, false, null, null);
-        Devolucion danada = Devolucion.reconstruir(2L, 1L, AHORA, EstadoEquipo.CON_DANOS, null, 3L, false, null, null);
+        Devolucion buena = Devolucion.reconstruir(1L, 1L, AHORA, EstadoEquipo.BUENO, null, 3L, 0, Dinero.CERO, false, null, null);
+        Devolucion danada = Devolucion.reconstruir(2L, 1L, AHORA, EstadoEquipo.CON_DANOS, null, 3L, 0, Dinero.CERO, false, null, null);
         assertThatThrownBy(() -> ReporteDano.reportar(buena, r, 1L, "x", SeveridadDano.LEVE, Dinero.CERO, 3L))
                 .hasMessageContaining("buen estado");
         assertThatThrownBy(() -> ReporteDano.reportar(danada, r, 99L, "x", SeveridadDano.LEVE, Dinero.CERO, 3L))

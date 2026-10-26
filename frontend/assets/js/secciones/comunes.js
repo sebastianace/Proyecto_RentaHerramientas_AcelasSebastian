@@ -104,7 +104,7 @@ async function cargarLogistica(r, caja) {
   if (r.estado === 'DEVUELTA') {
     try {
       const d = await get(`/reservas/${r.id}/devolucion`);
-      partes.push(`<div class="notice ${d.estadoEquipo === 'CON_DANOS' ? 'warn' : 'ok'}">${icono('undo')}<div><b>Devuelta</b> el ${fechaHora(d.fechaDevolucion)} · ${badge(d.estadoEquipo)} ${d.validada ? badge('APROBADO', 'Validada por el admin') : badge('PENDIENTE', 'Por validar')}
+      partes.push(`<div class="notice ${d.estadoEquipo === 'CON_DANOS' ? 'warn' : 'ok'}">${icono('undo')}<div><b>Devuelta</b> el ${fechaHora(d.fechaDevolucion)} · ${badge(d.estadoEquipo)}${d.diasRetraso > 0 ? ` <span class="badge bad">Tardía: ${d.diasRetraso} día(s) · multa ${cop(d.multa)}</span>` : ''} ${d.validada ? badge('APROBADO', 'Validada por el admin') : badge('PENDIENTE', 'Por validar')}
         ${d.danos.map((x) => `<div style="margin-top:.35rem">${badge(x.severidad)} ${esc(x.herramienta)}: ${esc(x.descripcion)} · ${cop(x.costoEstimado)} · ${badge(x.estado)}</div>`).join('')}</div></div>`);
     } catch { /* sin devolución registrada */ }
   }
@@ -327,15 +327,36 @@ export function modalDevolucion(r) {
     });
     cargando(boton, true);
     try {
-      await post(`/reservas/${r.id}/devolucion`, { estadoEquipo: form.estadoEquipo.value, observaciones: form.observaciones.value, danos });
+      const dev = await post(`/reservas/${r.id}/devolucion`, { estadoEquipo: form.estadoEquipo.value, observaciones: form.observaciones.value, danos });
       m.cerrar();
-      toast(`Devolución de ${r.codigo} confirmada${danos.length ? ` con ${danos.length} daño(s) reportado(s)` : ''}`, 'ok');
+      const multa = dev.diasRetraso > 0 ? `. Devolución tardía: ${dev.diasRetraso} día(s) de retraso, multa ${cop(dev.multa)}` : '';
+      toast(`Devolución de ${r.codigo} confirmada${danos.length ? ` con ${danos.length} daño(s) reportado(s)` : ''}${multa}`, dev.diasRetraso > 0 ? 'info' : 'ok');
       refrescar();
     } catch (error) {
       mostrarErrorEnFormulario(form, $('[data-error]', m.el), error);
     } finally {
       cargando(boton, false);
     }
+  });
+}
+
+// ---------- Cambiar contraseña (todos los roles) ----------
+
+export function modalCambiarPassword() {
+  formularioModal({
+    titulo: 'Cambiar mi contraseña', textoBoton: 'Cambiar contraseña',
+    campos: `
+      <label class="field"><span>Contraseña actual</span><input class="input" type="password" name="passwordActual" autocomplete="current-password" required></label>
+      <label class="field"><span>Contraseña nueva</span><input class="input" type="password" name="passwordNueva" autocomplete="new-password" minlength="8" required>
+        <small class="hint">Mínimo 8 caracteres, con al menos una letra y un número.</small></label>
+      <label class="field"><span>Repite la contraseña nueva</span><input class="input" type="password" name="confirmacion" autocomplete="new-password" required></label>`,
+    enviar: async (d) => {
+      if (d.passwordNueva !== d.confirmacion) {
+        throw Object.assign(new Error('Las contraseñas nuevas no coinciden'), { errores: { confirmacion: 'Las contraseñas no coinciden' } });
+      }
+      await post('/auth/cambiar-password', { passwordActual: d.passwordActual, passwordNueva: d.passwordNueva });
+      toast('Tu contraseña se actualizó correctamente', 'ok');
+    },
   });
 }
 

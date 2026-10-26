@@ -96,7 +96,10 @@ class FlujoAlquilerIntegracionTest extends IntegracionBase {
                 {"estadoEquipo":"CON_DANOS","danos":[{"herramientaId":1,"descripcion":"Carcasa partida","severidad":"GRAVE","costoEstimado":180000}]}""")
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.reserva.estado").value("DEVUELTA"))
-                .andExpect(jsonPath("$.danos[0].severidad").value("GRAVE"));
+                .andExpect(jsonPath("$.danos[0].severidad").value("GRAVE"))
+                // Devuelta antes de la fecha_fin: sin retraso y sin multa
+                .andExpect(jsonPath("$.diasRetraso").value(0))
+                .andExpect(jsonPath("$.multa").value(0.0));
         mvc.perform(get("/api/v1/herramientas/1")).andExpect(jsonPath("$.unidadesFueraServicio").value(fueraAntes + 1));
         int devolucionId = JsonPath.read(cuerpo(devuelta), "$.id");
 

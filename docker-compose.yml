@@ -1,0 +1,85 @@
+# =====================================================================
+# ObraYa con Docker Compose: base de datos + backend + frontend con UN solo comando.
+#
+#   docker compose up --build        (la primera vez tarda varios minutos: descarga y compila)
+#
+# Tienda:   http://localhost:5500
+# Swagger:  http://localhost:${BACKEND_PORT:-8080}/swagger-ui.html   (BACKEND_PORT se define en el .env)
+#
+# Las claves salen del archivo .env de la raíz del proyecto (el mismo del README).
+# Variables obligatorias: DB_PASSWORD y JWT_SECRET.
+# =====================================================================
+services:
+
+  # ---------- Base de datos ----------
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      # Con estas variables MySQL crea la base y el usuario de la app SOLO la primera vez que arranca
+      # con el volumen vacío. Si después cambias la clave, hay que borrar el volumen (docker compose down -v).
+      MYSQL_DATABASE: renta_herramientas
+      MYSQL_USER: renta_app
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Falta DB_PASSWORD en el archivo .env}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-root_solo_para_docker}
+      TZ: America/Bogota
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_0900_ai_ci
+    volumes:
+      - mysql_data:/var/lib/mysql
+    # Sin "ports": la base NO se expone al computador, solo el backend la alcanza por la red interna.
+    # Para mirarla con MySQL Workbench, descomenta (usa 3307 porque el 3306 puede estar ocupado):
+    # ports:
+    #   - "127.0.0.1:3307:3306"
+    healthcheck:
+      # -h 127.0.0.1 fuerza TCP: durante la inicialización MySQL solo escucha por socket,
+      # así no se marca "healthy" antes de tiempo.
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  # ---------- Backend (API REST) ----------
+  backend:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    restart: on-failure
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Perfil dev: Flyway carga también los datos de prueba (db/seed).
+      SPRING_PROFILES_ACTIVE: dev
+      # El host es "db": el nombre del servicio de arriba (Docker resuelve el nombre dentro de su red).
+      DB_URL: jdbc:mysql://db:3306/renta_herramientas?serverTimezone=America/Bogota&useSSL=false&allowPublicKeyRetrieval=true
+      DB_USERNAME: renta_app
+      DB_PASSWORD: ${DB_PASSWORD:?Falta DB_PASSWORD en el archivo .env}
+      JWT_SECRET: ${JWT_SECRET:?Falta JWT_SECRET en el archivo .env}
+      JWT_EXPIRACION: 8h
+      MEDIA_BASE_PATH: /app/uploads
+      # El frontend se sirve en el puerto 5500: ese origen debe estar permitido por CORS.
+      CORS_ALLOWED_ORIGINS: http://localhost:5500,http://127.0.0.1:5500
+    ports:
+      - "${BACKEND_PORT:-8080}:8080"
+    volumes:
+      # Las imágenes que suben los proveedores sobreviven aunque se recree el contenedor.
+      - uploads:/app/uploads
+
+  # ---------- Frontend (tienda ObraYa) ----------
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "5500:80"
+    # Para editar el frontend en vivo sin reconstruir la imagen, descomenta:
+    # volumes:
+    #   - ./frontend:/usr/share/nginx/html:ro
+
+volumes:
+  mysql_data:
+  uploads:

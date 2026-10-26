@@ -14,4 +14,10 @@ public interface AutenticacionUseCase {
     AutenticacionResult registrarCliente(RegistrarClienteCommand command);
 
     PerfilResult obtenerPerfil(Long usuarioId);
+
+    /**
+     * El usuario autenticado cambia su propia contraseña. Exige la clave actual (así, quien encuentre una sesión
+     * abierta no puede cambiarla) y que la nueva sea distinta.
+     */
+    void cambiarPassword(Long usuarioId, String passwordActual, String passwordNueva);
 }

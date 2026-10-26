@@ -4,6 +4,7 @@ import com.rentaherramientas.application.dtos.AutenticacionResult;
 import com.rentaherramientas.application.dtos.PerfilResult;
 import com.rentaherramientas.application.ports.in.AutenticacionUseCase;
 import com.rentaherramientas.application.ports.in.RecuperacionPasswordUseCase;
+import com.rentaherramientas.infrastructure.adapters.inbound.dtos.CambiarPasswordRequest;
 import com.rentaherramientas.infrastructure.adapters.inbound.dtos.LoginRequest;
 import com.rentaherramientas.infrastructure.adapters.inbound.dtos.RecuperarPasswordRequest;
 import com.rentaherramientas.infrastructure.adapters.inbound.dtos.RestablecerPasswordRequest;
@@ -87,6 +88,18 @@ public class AuthController {
     public Map<String, String> restablecer(@Valid @RequestBody RestablecerPasswordRequest request) {
         recuperacion.restablecerPassword(request.token(), request.password());
         return Map.of("mensaje", "Tu contraseña se actualizó. Ya puedes iniciar sesión");
+    }
+
+    @PostMapping("/cambiar-password")
+    @Operation(summary = "Cambiar mi contraseña",
+            description = "Requiere estar autenticado y escribir la contraseña actual. La nueva debe ser distinta")
+    @ApiResponse(responseCode = "200", description = "Contraseña actualizada")
+    @ApiResponse(responseCode = "400", description = "La contraseña nueva no cumple el formato")
+    @ApiResponse(responseCode = "422", description = "La contraseña actual es incorrecta o la nueva es igual a la actual")
+    public Map<String, String> cambiarPassword(@Valid @RequestBody CambiarPasswordRequest request,
+                                               @AuthenticationPrincipal UsuarioAutenticado usuario) {
+        autenticacion.cambiarPassword(usuario.id(), request.passwordActual(), request.passwordNueva());
+        return Map.of("mensaje", "Tu contraseña se actualizó correctamente");
     }
 
     @GetMapping("/me")

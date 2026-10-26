@@ -17,5 +17,9 @@ public interface ClienteRepository {
 
     boolean existePorDocumento(TipoDocumento tipoDocumento, String numeroDocumento);
 
-    Pagina<Cliente> listar(SolicitudPagina solicitud);
+    /**
+     * Lista los clientes paginados. {@code texto} busca en nombres, apellidos, correo y número de documento;
+     * {@code ciudad} filtra por ciudad. Ambos son opcionales (null o vacío = sin filtro).
+     */
+    Pagina<Cliente> listar(String texto, String ciudad, SolicitudPagina solicitud);
 }
