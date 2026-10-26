@@ -207,13 +207,13 @@ máquina con Java 21, sin Maven ni instalar un servidor:
 
 ```bash
 mvn clean install -DskipTests
-java -jar infrastructure/target/infrastructure-1.0.0.jar
+java -jar infrastructure/target/infrastructure-1.2.0.jar
 ```
 
 Ejecútalo **desde la raíz del proyecto**, para que encuentre el archivo `.env`. Para usar otro puerto:
 
 ```powershell
-$env:SERVER_PORT = "9090"; java -jar infrastructure\target\infrastructure-1.0.0.jar
+$env:SERVER_PORT = "9090"; java -jar infrastructure\target\infrastructure-1.2.0.jar
 ```
 
 | Variable | Qué controla |
