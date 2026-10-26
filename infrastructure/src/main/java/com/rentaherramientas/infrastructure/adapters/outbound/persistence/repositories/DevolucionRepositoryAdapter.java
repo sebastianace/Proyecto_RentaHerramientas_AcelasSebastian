@@ -34,6 +34,8 @@ public class DevolucionRepositoryAdapter implements DevolucionRepository {
             entidad.setEstadoEquipo(devolucion.getEstadoEquipo());
             entidad.setObservaciones(devolucion.getObservaciones());
             entidad.setRecibidaPor(usuarioJpa.getReferenceById(devolucion.getRecibidaPor()));
+            entidad.setDiasRetraso(devolucion.getDiasRetraso());
+            entidad.setMulta(devolucion.getMulta().monto());
         } else {
             entidad = jpa.findById(devolucion.getId())
                     .orElseThrow(() -> new RecursoNoEncontradoException("Devolución", devolucion.getId()));

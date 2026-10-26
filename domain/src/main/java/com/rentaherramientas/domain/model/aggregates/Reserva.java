@@ -8,6 +8,7 @@ import com.rentaherramientas.domain.model.valueobject.RangoFechas;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -23,6 +24,8 @@ import java.util.Set;
 public class Reserva {
 
     public static final int PORCENTAJE_IVA = 19;
+    /** Cada día de retraso se cobra el valor diario del alquiler al 150 % (recargo del 50 %). */
+    public static final int PORCENTAJE_RECARGO_RETRASO = 150;
 
     private final Long id;
     private final String codigo;
@@ -163,6 +166,28 @@ public class Reserva {
             return true;
         }
         return false;
+    }
+
+    // ---------- Multa por devolución tardía ----------
+
+    /** Días que pasaron desde el fin del alquiler hasta la devolución real (0 si se devolvió a tiempo). */
+    public int diasDeRetraso(LocalDate fechaDevolucion) {
+        return (int) Math.max(0, ChronoUnit.DAYS.between(rango.fin(), fechaDevolucion));
+    }
+
+    /**
+     * Multa = valor diario del alquiler (suma de precio x cantidad de cada herramienta, sin IVA) x 150 % x días de retraso.
+     * Usa el precio CONGELADO de los detalles: aunque el proveedor suba la tarifa después, la multa no cambia.
+     */
+    public Dinero calcularMulta(LocalDate fechaDevolucion) {
+        int diasRetraso = diasDeRetraso(fechaDevolucion);
+        if (diasRetraso == 0) {
+            return Dinero.CERO;
+        }
+        Dinero valorDiario = detalles.stream()
+                .map(d -> d.getPrecioPorDia().multiplicar(d.getCantidad()))
+                .reduce(Dinero.CERO, Dinero::sumar);
+        return valorDiario.porcentaje(PORCENTAJE_RECARGO_RETRASO).multiplicar(diasRetraso);
     }
 
     // ---------- Consultas ----------

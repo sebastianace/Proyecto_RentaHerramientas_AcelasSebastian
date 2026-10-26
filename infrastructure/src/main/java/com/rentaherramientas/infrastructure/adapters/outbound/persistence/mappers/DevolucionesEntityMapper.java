@@ -28,7 +28,8 @@ public final class DevolucionesEntityMapper {
 
     public static Devolucion aDominio(DevolucionEntity e) {
         return Devolucion.reconstruir(e.getId(), e.getReserva().getId(), e.getFechaDevolucion(), e.getEstadoEquipo(),
-                e.getObservaciones(), e.getRecibidaPor().getId(), e.isValidada(),
+                e.getObservaciones(), e.getRecibidaPor().getId(), e.getDiasRetraso(), Dinero.de(e.getMulta()),
+                e.isValidada(),
                 e.getValidadaPor() == null ? null : e.getValidadaPor().getId(), e.getFechaValidacion());
     }
 
@@ -47,7 +48,8 @@ public final class DevolucionesEntityMapper {
 
     public static DevolucionResult aResult(DevolucionEntity e, List<ReporteDanoResult> danos) {
         return new DevolucionResult(e.getId(), referencia(e.getReserva()), e.getFechaDevolucion(), e.getEstadoEquipo(),
-                e.getObservaciones(), nombre(e.getRecibidaPor()), e.isValidada(), nombre(e.getValidadaPor()),
+                e.getObservaciones(), nombre(e.getRecibidaPor()), e.getDiasRetraso(), e.getMulta(), e.isValidada(),
+                nombre(e.getValidadaPor()),
                 e.getFechaValidacion(), danos);
     }
 
