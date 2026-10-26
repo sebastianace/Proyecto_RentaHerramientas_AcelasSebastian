@@ -14,7 +14,8 @@ public interface GestionClientesUseCase {
 
     ClienteResult obtener(Long id, Solicitante solicitante);
 
-    Pagina<ClienteResult> listar(SolicitudPagina solicitud);
+    /** Solo ADMIN. Busca por texto (nombre, correo, documento) y por ciudad; ambos opcionales. */
+    Pagina<ClienteResult> listar(String texto, String ciudad, SolicitudPagina solicitud);
 
     ClienteResult actualizar(Long id, ActualizarClienteCommand command, Solicitante solicitante);
 

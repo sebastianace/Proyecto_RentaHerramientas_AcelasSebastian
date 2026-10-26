@@ -16,6 +16,7 @@ import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
@@ -49,6 +50,12 @@ public class DevolucionEntity {
     @JoinColumn(name = "recibida_por", nullable = false)
     private UsuarioEntity recibidaPor;
 
+    @Column(name = "dias_retraso", nullable = false)
+    private int diasRetraso;
+
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal multa = BigDecimal.ZERO;
+
     @Column(nullable = false)
     private boolean validada;
 
@@ -73,6 +80,10 @@ public class DevolucionEntity {
     public void setObservaciones(String observaciones) { this.observaciones = observaciones; }
     public UsuarioEntity getRecibidaPor() { return recibidaPor; }
     public void setRecibidaPor(UsuarioEntity recibidaPor) { this.recibidaPor = recibidaPor; }
+    public int getDiasRetraso() { return diasRetraso; }
+    public void setDiasRetraso(int diasRetraso) { this.diasRetraso = diasRetraso; }
+    public BigDecimal getMulta() { return multa; }
+    public void setMulta(BigDecimal multa) { this.multa = multa; }
     public boolean isValidada() { return validada; }
     public void setValidada(boolean validada) { this.validada = validada; }
     public UsuarioEntity getValidadaPor() { return validadaPor; }

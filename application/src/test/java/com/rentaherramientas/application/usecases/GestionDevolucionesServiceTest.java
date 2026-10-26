@@ -101,7 +101,7 @@ class GestionDevolucionesServiceTest {
         when(devolucionRepository.guardar(any())).thenAnswer(i -> {
             Devolucion d = i.getArgument(0);
             return Devolucion.reconstruir(50L, d.getReservaId(), d.getFecha(), d.getEstadoEquipo(), null,
-                    d.getRecibidaPor(), false, null, null);
+                    d.getRecibidaPor(), 0, Dinero.CERO, false, null, null);
         });
         when(reporteDanoRepository.guardar(any())).thenAnswer(i -> i.getArgument(0));
         when(herramientaRepository.bloquearParaReserva(List.of(1L))).thenReturn(List.of(herramienta(0)));
