@@ -7,7 +7,7 @@
     <!-- Proyecto padre: no genera código, solo agrupa los módulos y centraliza versiones -->
     <groupId>com.rentaherramientas</groupId>
     <artifactId>renta-herramientas</artifactId>
-    <version>1.0.0</version>
+    <version>1.2.0</version>
     <packaging>pom</packaging>
 
     <name>Renta de Herramientas</name>
